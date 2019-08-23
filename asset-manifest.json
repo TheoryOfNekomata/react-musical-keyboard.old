@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/react-musical-keyboard/static/css/main.f731fd7c.chunk.css",
+    "main.js": "/react-musical-keyboard/static/js/main.b99e7c74.chunk.js",
+    "main.js.map": "/react-musical-keyboard/static/js/main.b99e7c74.chunk.js.map",
+    "runtime~main.js": "/react-musical-keyboard/static/js/runtime~main.247eb2fa.js",
+    "runtime~main.js.map": "/react-musical-keyboard/static/js/runtime~main.247eb2fa.js.map",
+    "static/js/2.20d04375.chunk.js": "/react-musical-keyboard/static/js/2.20d04375.chunk.js",
+    "static/js/2.20d04375.chunk.js.map": "/react-musical-keyboard/static/js/2.20d04375.chunk.js.map",
+    "index.html": "/react-musical-keyboard/index.html",
+    "precache-manifest.fdf500d9ffea90514a5e49d27ca2d33f.js": "/react-musical-keyboard/precache-manifest.fdf500d9ffea90514a5e49d27ca2d33f.js",
+    "service-worker.js": "/react-musical-keyboard/service-worker.js",
+    "static/css/main.f731fd7c.chunk.css.map": "/react-musical-keyboard/static/css/main.f731fd7c.chunk.css.map"
+  }
+}
