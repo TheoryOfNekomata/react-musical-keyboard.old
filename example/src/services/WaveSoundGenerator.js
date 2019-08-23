@@ -23,7 +23,7 @@ export default function WaveSoundGenerator() {
     oscillators[id].type = sounds[sound]
     oscillators[id].connect(gainNode)
     gainNode.connect(audioCtx.destination)
-    gainNode.gain.value = 0.02
+    gainNode.gain.value = volume * 0.001
 
     oscillators[id].frequency.value = frequency
     oscillators[id].start()
