@@ -2,6 +2,8 @@
 
 Musical keyboard component for React.
 
+`react-musical-keyboard` is inspired by the UI/UX of keyboards on FL Studio's piano roll.
+
 [![NPM](https://img.shields.io/npm/v/react-musical-keyboard.svg)](https://www.npmjs.com/package/react-musical-keyboard) [![JavaScript Style Guide](https://img.shields.io/badge/code_style-standard-brightgreen.svg)](https://standardjs.com)
 
 ## Install
@@ -31,11 +33,11 @@ const KEYBOARD_MAPPING = {
 }
 
 const App = () => {
-  handleKeyOn = ({ id, velocity }) => {
+  handleKeyOn = ({ value: { id, velocity } }) => {
     // ...maybe use the Web Audio/MIDI API to generate sounds?
   }
 
-  handleKeyOff = ({ id }) => {
+  handleKeyOff = ({ value: { id } }) => {
     // ...
   }
 
