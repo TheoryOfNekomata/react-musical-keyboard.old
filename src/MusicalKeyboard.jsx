@@ -160,7 +160,7 @@ const MusicalKeyboard = React.forwardRef(({
       borderLeft: '1px solid black',
       borderBottom: naturalKey ? null : '1px solid black',
       marginLeft: naturalKey && !isFirstKey ? `-${100 * (1 / octavePitches.length) * getOctaveAdjustment(octavePitches[0]) * computeNaturalKeyMarginLeft(key)}%` : null,
-      marginRight: naturalKey && !isLastKey ? `-${100 * (1 / octavePitches.length) * computeNaturalKeyMarginRight(key)}%` : null,
+      marginRight: naturalKey && !isLastKey ? `-${100 * (1 / octavePitches.length) * getOctaveAdjustment(octavePitches[0]) * computeNaturalKeyMarginRight(key)}%` : null,
       width: naturalKey ? `${100 / naturalKeyOctavePitches.length}%` : `${100 / naturalKeyOctavePitches.length / 12 * 7}%`,
       height: naturalKey ? '100%' : accidentalKeyHeight,
       cursor: 'pointer',
