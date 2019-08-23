@@ -35,4 +35,6 @@ export default function WaveSoundGenerator() {
       delete oscillators[id]
     }
   }
+
+  this.getSounds = () => 'sine triangle sawtooth square'.split(' ')
 }

@@ -112,15 +112,21 @@ const App = ({
   }
 
   React.useEffect(() => {
-    generator.sendMessage(64, sustain)
+    if ('sendMessage' in generator) {
+      generator.sendMessage(64, sustain)
+    }
   }, [sustain, ])
 
   React.useEffect(() => {
-    generator.sendMessage(66, sostenuto)
+    if ('sendMessage' in generator) {
+      generator.sendMessage(66, sostenuto)
+    }
   }, [sostenuto, ])
 
   React.useEffect(() => {
-    generator.sendMessage(67, unaCorda)
+    if ('sendMessage' in generator) {
+      generator.sendMessage(67, unaCorda)
+    }
   }, [unaCorda, ])
 
   React.useEffect(() => {
@@ -147,7 +153,7 @@ const App = ({
               ref={soundRef}
             >
               {
-                sounds.map((s, i) => (
+                generator.getSounds().map((s, i) => (
                   <option
                     key={i}
                     value={i}
@@ -169,37 +175,42 @@ const App = ({
           borderColor: 'black',
         }}
       >
-        <div
-          className="pedals"
-        >
-          <button
-            type="button"
-            ref={unaCordaPedalRef}
-            onMouseDown={handleUnaCordaPedalDepress}
-            onMouseUp={handleUnaCordaPedalRelease}
-            onMouseLeave={handleUnaCordaPedalRelease}
-          >
-            Una Corda
-          </button>
-          <button
-            type="button"
-            ref={sostenutoPedalRef}
-            onMouseDown={handleSostenutoPedalDepress}
-            onMouseUp={handleSostenutoPedalRelease}
-            onMouseLeave={handleSostenutoPedalRelease}
-          >
-            Sostenuto
-          </button>
-          <button
-            type="button"
-            ref={sustainPedalRef}
-            onMouseDown={handleSustainPedalDepress}
-            onMouseUp={handleSustainPedalRelease}
-            onMouseLeave={handleSustainPedalRelease}
-          >
-            Sustain
-          </button>
-        </div>
+        {
+          'sendMessage' in generator
+          && (
+            <div
+              className="pedals"
+            >
+              <button
+                type="button"
+                ref={unaCordaPedalRef}
+                onMouseDown={handleUnaCordaPedalDepress}
+                onMouseUp={handleUnaCordaPedalRelease}
+                onMouseLeave={handleUnaCordaPedalRelease}
+              >
+                Una Corda
+              </button>
+              <button
+                type="button"
+                ref={sostenutoPedalRef}
+                onMouseDown={handleSostenutoPedalDepress}
+                onMouseUp={handleSostenutoPedalRelease}
+                onMouseLeave={handleSostenutoPedalRelease}
+              >
+                Sostenuto
+              </button>
+              <button
+                type="button"
+                ref={sustainPedalRef}
+                onMouseDown={handleSustainPedalDepress}
+                onMouseUp={handleSustainPedalRelease}
+                onMouseLeave={handleSustainPedalRelease}
+              >
+                Sustain
+              </button>
+            </div>
+          )
+        }
         <div
           className="keyboard"
         >
