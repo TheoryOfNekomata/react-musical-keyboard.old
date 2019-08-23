@@ -1,4 +1,4 @@
-const computeWhiteKeyMarginRight = key => {
+const computeNaturalKeyMarginRight = key => {
   const pitchIndex = key.id % 12
   switch (pitchIndex) {
     case 0:
@@ -17,4 +17,4 @@ const computeWhiteKeyMarginRight = key => {
   return 0
 }
 
-export default computeWhiteKeyMarginRight
+export default computeNaturalKeyMarginRight

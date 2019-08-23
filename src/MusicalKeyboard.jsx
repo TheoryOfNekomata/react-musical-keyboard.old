@@ -2,9 +2,9 @@ import * as React from 'react'
 import * as PropTypes from 'prop-types'
 import tinycolor from 'tinycolor2'
 
-import isWhiteKey from './services/isWhiteKey'
-import computeWhiteKeyMarginLeft from './services/computeWhiteKeyMarginLeft'
-import computeWhiteKeyMarginRight from './services/computeWhiteKeyMarginRight'
+import isNaturalKey from './services/isNaturalKey'
+import computeNaturalKeyMarginLeft from './services/computeNaturalKeyMarginLeft'
+import computeNaturalKeyMarginRight from './services/computeNaturalKeyMarginRight'
 import getOctaveAdjustment from './services/getOctaveAdjustment'
 
 const MusicalKeyboard = React.forwardRef(({
@@ -15,10 +15,10 @@ const MusicalKeyboard = React.forwardRef(({
   onKeyOff = null,
   labels = null,
   keyboardMapping = null,
-  blackKeyHeight = '60%',
+  accidentalKeyHeight = '60%',
   keyboardVelocity = 0.75,
-  whiteKeyColor = 'white',
-  blackKeyColor = 'black',
+  naturalKeyColor = 'white',
+  accidentalKeyColor = 'black',
   ...props
 }, ref) => {
   const keyboardRef = ref || React.useRef(null)
@@ -28,7 +28,7 @@ const MusicalKeyboard = React.forwardRef(({
   const [notesOn, setNotesOn, ] = React.useState([])
   const [, setMouseNotesOn, ] = React.useState([])
   const theOctaveKeys = Object.entries(octaveKeys)
-  const whiteKeysLength = Object.values(octaveKeys).flat().filter(p => isWhiteKey(p)).length
+  const naturalKeysLength = Object.values(octaveKeys).flat().filter(p => isNaturalKey(p)).length
   const [, setMouseVelocity, ] = React.useState(null)
 
   const triggerKeyOn = fromMouse => (key, noteVelocity) => {
@@ -190,24 +190,24 @@ const MusicalKeyboard = React.forwardRef(({
   }
 
   const computeKeyClickAreaStyle = (key, i, octavePitches) => {
-    const whiteKey = isWhiteKey(key)
+    const naturalKey = isNaturalKey(key)
     const isFirstKey = octavePitches[0].id === key.id
     const isLastKey = octavePitches[octavePitches.length - 1].id === key.id
-    const whiteKeyOctavePitches = octavePitches.filter(p => isWhiteKey(p))
+    const naturalKeyOctavePitches = octavePitches.filter(p => isNaturalKey(p))
     return {
-      borderRadius: whiteKey ? '0 0 2% 2%' : '0 0 10% 10%',
+      borderRadius: naturalKey ? '0 0 2% 2%' : '0 0 10% 10%',
       display: 'inline-block',
       verticalAlign: 'top',
       boxSizing: 'border-box',
       borderLeft: '1px solid black',
-      borderBottom: whiteKey ? null : '1px solid black',
-      marginLeft: whiteKey && !isFirstKey ? `-${100 * (1 / octavePitches.length) * getOctaveAdjustment(octavePitches[0]) * computeWhiteKeyMarginLeft(key)}%` : null,
-      marginRight: whiteKey && !isLastKey ? `-${100 * (1 / octavePitches.length) * computeWhiteKeyMarginRight(key)}%` : null,
-      width: whiteKey ? `${100 / whiteKeyOctavePitches.length}%` : `${100 / whiteKeyOctavePitches.length / 12 * 7}%`,
-      height: whiteKey ? '100%' : blackKeyHeight,
+      borderBottom: naturalKey ? null : '1px solid black',
+      marginLeft: naturalKey && !isFirstKey ? `-${100 * (1 / octavePitches.length) * getOctaveAdjustment(octavePitches[0]) * computeNaturalKeyMarginLeft(key)}%` : null,
+      marginRight: naturalKey && !isLastKey ? `-${100 * (1 / octavePitches.length) * computeNaturalKeyMarginRight(key)}%` : null,
+      width: naturalKey ? `${100 / naturalKeyOctavePitches.length}%` : `${100 / naturalKeyOctavePitches.length / 12 * 7}%`,
+      height: naturalKey ? '100%' : accidentalKeyHeight,
       cursor: 'pointer',
       position: 'relative',
-      zIndex: whiteKey ? 0 : 1,
+      zIndex: naturalKey ? 0 : 1,
       backgroundColor: 'black',
     }
   }
@@ -215,21 +215,21 @@ const MusicalKeyboard = React.forwardRef(({
   const isPressed = key => Array.isArray(notesOn) && notesOn.includes(key.id)
 
   const computePressedKeyBackgroundImage = key => {
-    const whiteKey = isWhiteKey(key)
+    const naturalKey = isNaturalKey(key)
 
     return (
-      whiteKey
-        ? `linear-gradient(to bottom, ${whiteKeyColor}, ${tinycolor(whiteKeyColor).setAlpha(0.9).toRgbString()})`
-        : `linear-gradient(to bottom, ${blackKeyColor}, ${tinycolor(blackKeyColor).setAlpha(0.9).toRgbString()})`
+      naturalKey
+        ? `linear-gradient(to bottom, ${naturalKeyColor}, ${tinycolor(naturalKeyColor).setAlpha(0.9).toRgbString()})`
+        : `linear-gradient(to bottom, ${accidentalKeyColor}, ${tinycolor(accidentalKeyColor).setAlpha(0.9).toRgbString()})`
     )
   }
 
   const computeNotPressedKeyBackgroundImage = key => {
-    const whiteKey = isWhiteKey(key)
+    const naturalKey = isNaturalKey(key)
     return (
-      whiteKey
-        ? `linear-gradient(to bottom, ${whiteKeyColor}, ${whiteKeyColor})`
-        : `linear-gradient(to bottom, ${blackKeyColor}, ${blackKeyColor})`
+      naturalKey
+        ? `linear-gradient(to bottom, ${naturalKeyColor}, ${naturalKeyColor})`
+        : `linear-gradient(to bottom, ${accidentalKeyColor}, ${accidentalKeyColor})`
     )
   }
 
@@ -240,15 +240,15 @@ const MusicalKeyboard = React.forwardRef(({
   )
 
   const computePressedBoxShadow = key => (
-    isWhiteKey(key)
+    isNaturalKey(key)
       ? `0 0 4px 16px rgba(255,255,255,0) inset, 0 0 4px rgba(0,0,0,0.0), 2px -2px 1px -1px rgba(0,0,0,0.25) inset`
       : `0 0 4px rgba(0,0,0,0), 1px -1px 4px rgba(0,0,0,1) inset, -1.5px -2px 1px rgba(0,0,0,0.5) inset, 1.5px -1px 1px rgba(255,255,255,0.75) inset`
   )
 
   const computeNotPressedBoxShadow = key => (
-    isWhiteKey(key)
-      ? `0 0 4px 16px ${whiteKeyColor} inset, 0 0 4px rgba(0,0,0,0.75), 2px -2px 1px -1px rgba(0,0,0,0.25) inset`
-      : `0 0 4px rgba(0,0,0,0.75), 1px -2px 4px ${tinycolor(blackKeyColor).darken(12).toRgbString()} inset, -2px -4px 1px ${tinycolor(blackKeyColor).darken(20).toRgbString()} inset, 2px -4px 1px rgba(255,255,255,0.75) inset`
+    isNaturalKey(key)
+      ? `0 0 4px 16px ${naturalKeyColor} inset, 0 0 4px rgba(0,0,0,0.75), 2px -2px 1px -1px rgba(0,0,0,0.25) inset`
+      : `0 0 4px rgba(0,0,0,0.75), 1px -2px 4px ${tinycolor(accidentalKeyColor).darken(12).toRgbString()} inset, -2px -4px 1px ${tinycolor(accidentalKeyColor).darken(20).toRgbString()} inset, 2px -4px 1px rgba(255,255,255,0.75) inset`
   )
 
   const computeBoxShadow = key => (
@@ -258,7 +258,7 @@ const MusicalKeyboard = React.forwardRef(({
   )
 
   const computeColor = key => (
-    isWhiteKey(key)
+    isNaturalKey(key)
       ? 'var(--white-key-foreground-color)'
       : 'var(--black-key-foreground-color)'
   )
@@ -289,14 +289,14 @@ const MusicalKeyboard = React.forwardRef(({
   })
 
   const computeKeyLabelStyle = key => {
-    const whiteKey = isWhiteKey(key)
+    const naturalKey = isNaturalKey(key)
     return {
       position: 'absolute',
       bottom: '0.5rem',
       pointerEvents: 'none',
-      filter: whiteKey ? null : 'invert(100%)',
-      transform: whiteKey ? null : 'rotate(90deg)',
-      transformOrigin: whiteKey ? null : 'top right',
+      filter: naturalKey ? null : 'invert(100%)',
+      transform: naturalKey ? null : 'rotate(90deg)',
+      transformOrigin: naturalKey ? null : 'top right',
       fontSize: '75%',
       width: '100%',
       textAlign: 'center',
@@ -358,7 +358,7 @@ const MusicalKeyboard = React.forwardRef(({
               whiteSpace: 'nowrap',
               boxSizing: 'border-box',
               marginRight: octaveIndex === octaves.length - 1 ? '-1px' : null,
-              width: `${pitches.filter(p => isWhiteKey(p)).length / whiteKeysLength * 100}%`,
+              width: `${pitches.filter(p => isNaturalKey(p)).length / naturalKeysLength * 100}%`,
             }}
           >
             {
@@ -399,10 +399,10 @@ MusicalKeyboard.propTypes = {
   onKeyOff: PropTypes.func,
   labels: PropTypes.func,
   keyboardMapping: PropTypes.shape(),
-  blackKeyHeight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  accidentalKeyHeight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   keyboardVelocity: PropTypes.number,
-  whiteKeyColor: PropTypes.string,
-  blackKeyColor: PropTypes.string,
+  naturalKeyColor: PropTypes.string,
+  accidentalKeyColor: PropTypes.string,
 }
 
 export default MusicalKeyboard

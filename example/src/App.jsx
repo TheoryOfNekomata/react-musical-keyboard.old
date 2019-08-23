@@ -166,10 +166,10 @@ const App = ({
         onKeyOff={handleKeyOff}
         startKey={startKeyProp}
         endKey={endKeyProp}
-        blackKeyHeight="65%"
+        accidentalKeyHeight="65%"
         keyboardMapping={keyboardMapping}
-        whiteKeyColor="white"
-        blackKeyColor="black"
+        naturalKeyColor="white"
+        accidentalKeyColor="black"
       />
     </div>
   )

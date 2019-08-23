@@ -1,4 +1,4 @@
-const isWhiteKey = key => {
+const isNaturalKey = key => {
   const pitchIndex = key.id % 12
   switch (pitchIndex) {
     case 0:
@@ -15,4 +15,4 @@ const isWhiteKey = key => {
   return false
 }
 
-export default isWhiteKey
+export default isNaturalKey
