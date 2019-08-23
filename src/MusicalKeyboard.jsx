@@ -19,54 +19,23 @@ const MusicalKeyboard = React.forwardRef(({
   keyboardVelocity = 0.75,
   naturalKeyColor = 'white',
   accidentalKeyColor = 'black',
+  notesOn = [],
   ...props
 }, ref) => {
   const keyboardRef = ref || React.useRef(null)
   const [, setKeyboardKeys, ] = React.useState([])
   const [octaveKeys, setOctaveKeys, ] = React.useState({})
   const [keys, setKeys, ] = React.useState({})
-  const [notesOn, setNotesOn, ] = React.useState([])
   const [, setMouseNotesOn, ] = React.useState([])
   const theOctaveKeys = Object.entries(octaveKeys)
-  const naturalKeysLength = Object.values(octaveKeys).flat().filter(p => isNaturalKey(p)).length
+  const naturalKeysLength = Object
+    .values(octaveKeys)
+    .reduce((k, l) => [...k, ...l], [])
+    .filter(p => isNaturalKey(p))
+    .length
   const [, setMouseVelocity, ] = React.useState(null)
 
-  const triggerKeyOn = fromMouse => (key, noteVelocity) => {
-    setNotesOn(notesOn => Array.from(new Set([
-      ...notesOn,
-      key.id,
-    ])))
-
-    if (fromMouse) {
-      setMouseNotesOn(mouseNotesOn => Array.from(new Set([
-        ...mouseNotesOn,
-        key.id,
-      ])))
-
-      setMouseVelocity(oldVelocity => {
-        const theMouseVelocity = (
-          oldVelocity !== null
-            ? oldVelocity
-            : noteVelocity
-        )
-
-        if (onKeyOn) {
-          onKeyOn({
-            target: {
-              ...keyboardRef.current,
-              value: {
-                ...key,
-                velocity: theMouseVelocity,
-              },
-            },
-          })
-        }
-
-        return theMouseVelocity
-      })
-      return
-    }
-
+  const triggerKeyOn = source => (key, noteVelocity) => {
     if (onKeyOn) {
       onKeyOn({
         target: {
@@ -76,32 +45,19 @@ const MusicalKeyboard = React.forwardRef(({
             velocity: noteVelocity,
           },
         },
+        source,
       })
     }
   }
 
-  const triggerKeyOff = fromMouse => key => {
-    window.setTimeout(() => {
-      setNotesOn(keysOn => keysOn.filter(k => k !== key.id))
-      if (fromMouse) {
-        setMouseNotesOn(keysOn => {
-          const newKeys = keysOn.filter(k => k !== key.id)
-          setMouseVelocity(oldVelocity => (
-            newKeys.length < 1
-              ? null
-              : oldVelocity
-          ))
-          return newKeys
-        })
-      }
-    })
-
+  const triggerKeyOff = source => key => {
     if (onKeyOff) {
       onKeyOff({
         target: {
           ...keyboardRef.current,
           value: key,
         },
+        source,
       })
     }
   }
@@ -109,7 +65,7 @@ const MusicalKeyboard = React.forwardRef(({
   const handleMouseLeave = key => e => {
     const { buttons, } = e
     if (buttons === 1) {
-      triggerKeyOff(true)(key)
+      triggerKeyOff('mouse')(key)
     }
   }
 
@@ -118,7 +74,7 @@ const MusicalKeyboard = React.forwardRef(({
     const { top, } = keyboardRef.current.getBoundingClientRect()
     const offsetY = clientY - top
     if (buttons === 1) {
-      triggerKeyOn(true)(key, offsetY / target.offsetHeight)
+      triggerKeyOn('mouse')(key, offsetY / target.offsetHeight)
     }
   }
 
@@ -129,13 +85,13 @@ const MusicalKeyboard = React.forwardRef(({
     if (buttons === 1) {
       e.preventDefault()
       keyboardRef.current.focus()
-      triggerKeyOn(true)(key, offsetY / target.offsetHeight)
+      triggerKeyOn('mouse')(key, offsetY / target.offsetHeight)
     }
   }
 
   const handleMouseUp = key => e => {
     e.preventDefault()
-    triggerKeyOff(true)(key)
+    triggerKeyOff('mouse')(key)
   }
 
   const handleKeyDown = e => {
@@ -160,7 +116,7 @@ const MusicalKeyboard = React.forwardRef(({
       }
       const theKey = keyboardMapping[keyCode]
       if (keyboardMapping !== null && theKey) {
-        triggerKeyOn(false)(keys[theKey], keyboardVelocity)
+        triggerKeyOn('keyboard')(keys[theKey], keyboardVelocity)
       }
       return [...c, keyCode]
     })
@@ -405,6 +361,7 @@ MusicalKeyboard.propTypes = {
   keyboardVelocity: PropTypes.number,
   naturalKeyColor: PropTypes.string,
   accidentalKeyColor: PropTypes.string,
+  notesOn: PropTypes.arrayOf(PropTypes.number),
 }
 
 export default MusicalKeyboard

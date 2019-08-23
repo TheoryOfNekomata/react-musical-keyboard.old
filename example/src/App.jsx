@@ -20,6 +20,9 @@ const App = ({
   const [sustain, setSustain, ] = React.useState(false)
   const [sostenuto, setSostenuto, ] = React.useState(false)
   const [unaCorda, setUnaCorda, ] = React.useState(false)
+  const [notesOn, setNotesOn, ] = React.useState([])
+  const [mouseNotesOn, setMouseNotesOn, ] = React.useState([])
+  const [velocity, setVelocity, ] = React.useState(null)
 
   const soundRef = React.useRef(null)
   const sustainPedalRef = React.useRef(null)
@@ -69,15 +72,43 @@ const App = ({
   }
 
   const handleKeyOn = e => {
-    generator.soundOn(
-      e.target.value.id,
-      e.target.value.velocity * 0x7f,
-      getKeyFrequency(e.target.value.id, 69, 440),
-    )
+    const { source, } = e
+    const { id, velocity, } = e.target.value
+    if (source === 'mouse') {
+      setMouseNotesOn(notes => [
+        ...notes,
+        id,
+      ])
+    }
+    setNotesOn(notes => [
+      ...notes,
+      id,
+    ])
+    setVelocity(oldVelocity => {
+      const theVelocity = oldVelocity !== null ? oldVelocity : velocity
+      generator.soundOn(
+        id,
+        (source === 'mouse' ? theVelocity : velocity) * 0x7f,
+        getKeyFrequency(id, 69, 440),
+      )
+      return source === 'mouse' ? theVelocity : oldVelocity
+    })
   }
 
   const handleKeyOff = e => {
-    generator.soundOff(e.target.value.id)
+    const { source, } = e
+    const { id, } = e.target.value
+    setNotesOn(notes => notes.filter(n => n !== id))
+    if (source === 'mouse') {
+      window.setTimeout(() => {
+        setMouseNotesOn(notes => {
+          const newNotes = notes.filter(n => n !== id)
+          setVelocity(oldVelocity => newNotes.length > 0 ? oldVelocity : null)
+          return newNotes
+        })
+      })
+    }
+    generator.soundOff(id)
   }
 
   React.useEffect(() => {
@@ -98,10 +129,7 @@ const App = ({
   }, [sound, ])
 
   React.useEffect(() => {
-    window.document.body.addEventListener('focus', keepFocus)
-    return () => {
-      window.document.body.removeEventListener('focus', keepFocus)
-    }
+    keepFocus()
   }, [])
 
   return (
@@ -109,26 +137,28 @@ const App = ({
       <div
         className="topbar"
       >
-        <label className="sound">
-          <span className="label">Sound</span>
-          <select
-            className="input"
-            name="sound"
-            onChange={handleSoundChange}
-            ref={soundRef}
-          >
-            {
-              sounds.map((s, i) => (
-                <option
-                  key={i}
-                  value={i}
-                >
-                  {s}
-                </option>
-              ))
-            }
-          </select>
-        </label>
+        <div className="group">
+          <label className="sound">
+            <span className="label">Sound</span>
+            <select
+              className="input"
+              name="sound"
+              onChange={handleSoundChange}
+              ref={soundRef}
+            >
+              {
+                sounds.map((s, i) => (
+                  <option
+                    key={i}
+                    value={i}
+                  >
+                    {s}
+                  </option>
+                ))
+              }
+            </select>
+          </label>
+        </div>
       </div>
       <div
         style={{
@@ -147,6 +177,7 @@ const App = ({
             ref={unaCordaPedalRef}
             onMouseDown={handleUnaCordaPedalDepress}
             onMouseUp={handleUnaCordaPedalRelease}
+            onMouseLeave={handleUnaCordaPedalRelease}
           >
             Una Corda
           </button>
@@ -155,6 +186,7 @@ const App = ({
             ref={sostenutoPedalRef}
             onMouseDown={handleSostenutoPedalDepress}
             onMouseUp={handleSostenutoPedalRelease}
+            onMouseLeave={handleSostenutoPedalRelease}
           >
             Sostenuto
           </button>
@@ -163,6 +195,7 @@ const App = ({
             ref={sustainPedalRef}
             onMouseDown={handleSustainPedalDepress}
             onMouseUp={handleSustainPedalRelease}
+            onMouseLeave={handleSustainPedalRelease}
           >
             Sustain
           </button>
@@ -181,6 +214,7 @@ const App = ({
             keyboardMapping={keyboardMapping}
             naturalKeyColor="white"
             accidentalKeyColor="black"
+            notesOn={notesOn}
           />
         </div>
       </div>

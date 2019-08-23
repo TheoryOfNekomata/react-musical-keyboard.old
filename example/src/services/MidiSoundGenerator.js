@@ -3,6 +3,8 @@ export default function MidiSoundGenerator() {
   let midiOutput = null
   const channel = 0
 
+  window.navigator.requestMIDIAccess()
+
   window.navigator.requestMIDIAccess().then((midiAccess) => {
     for (let e of midiAccess.outputs.values()) {
       if (midiOutput === null) {
