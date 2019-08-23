@@ -115,7 +115,8 @@ const MusicalKeyboard = React.forwardRef(({
 
   const handleMouseEnter = key => e => {
     const { buttons, clientY, target, } = e
-    const offsetY = clientY - keyboardRef.current.offsetTop
+    const { top, } = keyboardRef.current.getBoundingClientRect()
+    const offsetY = clientY - top
     if (buttons === 1) {
       triggerKeyOn(true)(key, offsetY / target.offsetHeight)
     }
@@ -123,7 +124,8 @@ const MusicalKeyboard = React.forwardRef(({
 
   const handleMouseClick = key => e => {
     const { buttons, clientY, target, } = e
-    const offsetY = clientY - keyboardRef.current.offsetTop
+    const { top, } = keyboardRef.current.getBoundingClientRect()
+    const offsetY = clientY - top
     if (buttons === 1) {
       e.preventDefault()
       keyboardRef.current.focus()

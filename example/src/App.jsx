@@ -27,62 +27,75 @@ const App = ({
   const unaCordaPedalRef = React.useRef(null)
   const keyboardRef = React.useRef(null)
 
+  const keepFocus = () => {
+    window.setTimeout(() => {
+      keyboardRef.current.focus()
+    })
+  }
+
   const handleSoundChange = e => {
-    const { value, } = e.target
-    setSound(value)
-    generator.changeSound(value)
-    keyboardRef.current.focus()
+    setSound(e.target.value)
+    keepFocus()
   }
 
-  const handleSustainPedalChange = e => {
-    const { value, checked, } = e.target
-    const ccValue = checked ? value : 0
-    setSustain(ccValue)
-    generator.sendMessage(64, ccValue)
-    keyboardRef.current.focus()
+  const handleSustainPedalDepress = () => {
+    setSustain(127)
+    keepFocus()
   }
 
-  const handleSostenutoPedalChange = e => {
-    const { value, checked, } = e.target
-    const ccValue = checked ? value : 0
-    setSostenuto(ccValue)
-    generator.sendMessage(66, ccValue)
-    keyboardRef.current.focus()
+  const handleSustainPedalRelease = () => {
+    setSustain(0)
+    keepFocus()
   }
 
-  const handleUnaCordaPedalChange = e => {
-    const { value, checked, } = e.target
-    const ccValue = checked ? value : 0
-    setUnaCorda(ccValue)
-    generator.sendMessage(67, ccValue)
-    keyboardRef.current.focus()
+  const handleSostenutoPedalDepress = () => {
+    setSostenuto(127)
+    keepFocus()
+  }
+
+  const handleSostenutoPedalRelease = () => {
+    setSostenuto(0)
+    keepFocus()
+  }
+
+  const handleUnaCordaPedalDepress = () => {
+    setUnaCorda(127)
+    keepFocus()
+  }
+
+  const handleUnaCordaPedalRelease = () => {
+    setUnaCorda(0)
+    keepFocus()
   }
 
   const handleKeyOn = e => {
-    const { value, } = e.target
-    const { id: noteId, velocity: noteVelocity, } = value
     generator.soundOn(
-      noteId,
-      noteVelocity * 0x7f,
-      getKeyFrequency(noteId, 69, 440),
+      e.target.value.id,
+      e.target.value.velocity * 0x7f,
+      getKeyFrequency(e.target.value.id, 69, 440),
     )
   }
 
   const handleKeyOff = e => {
-    const { id: noteId, } = e.target.value
-    generator.soundOff(noteId)
-  }
-
-  const keepFocus = () => {
-    keyboardRef.current.focus()
+    generator.soundOff(e.target.value.id)
   }
 
   React.useEffect(() => {
+    generator.sendMessage(64, sustain)
+  }, [sustain, ])
+
+  React.useEffect(() => {
+    generator.sendMessage(66, sostenuto)
+  }, [sostenuto, ])
+
+  React.useEffect(() => {
+    generator.sendMessage(67, unaCorda)
+  }, [unaCorda, ])
+
+  React.useEffect(() => {
+    generator.changeSound(sound)
     soundRef.current.value = sound
-    sustainPedalRef.current.checked = sustain > 0
-    sostenutoPedalRef.current.checked = sostenuto > 0
-    unaCordaPedalRef.current.checked = unaCorda > 0
-  }, [sound, sustain, sostenuto, unaCorda ])
+  }, [sound, ])
 
   React.useEffect(() => {
     window.document.body.addEventListener('focus', keepFocus)
@@ -92,9 +105,11 @@ const App = ({
   }, [])
 
   return (
-    <div>
-      <form>
-        <label className="field">
+    <React.Fragment>
+      <div
+        className="topbar"
+      >
+        <label className="sound">
           <span className="label">Sound</span>
           <select
             className="input"
@@ -114,64 +129,62 @@ const App = ({
             }
           </select>
         </label>
-        <label>
-          <input
-            type="checkbox"
-            name="una_corda"
-            value="127"
-            ref={unaCordaPedalRef}
-            onChange={handleUnaCordaPedalChange}
-          />
-          <span>
-            Una Corda
-          </span>
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            name="sostenuto"
-            value="127"
-            ref={sostenutoPedalRef}
-            onChange={handleSostenutoPedalChange}
-          />
-          <span>
-            Sostenuto
-          </span>
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            name="sustain"
-            value="127"
-            ref={sustainPedalRef}
-            onChange={handleSustainPedalChange}
-          />
-          <span>
-            Sustain
-          </span>
-        </label>
-      </form>
-      <MusicalKeyboard
-        ref={keyboardRef}
-        className="keyboard"
+      </div>
+      <div
         style={{
-          height: '8vw',
           width: '100%',
           position: 'fixed',
           bottom: 0,
           left: 0,
+          borderColor: 'black',
         }}
-        labels={key => withLabels ? `${PITCH_NAMES[key.id % 12]}${Math.floor(key.id / 12) - 1}` : null}
-        onKeyOn={handleKeyOn}
-        onKeyOff={handleKeyOff}
-        startKey={startKeyProp}
-        endKey={endKeyProp}
-        accidentalKeyHeight="65%"
-        keyboardMapping={keyboardMapping}
-        naturalKeyColor="white"
-        accidentalKeyColor="black"
-      />
-    </div>
+      >
+        <div
+          className="pedals"
+        >
+          <button
+            type="button"
+            ref={unaCordaPedalRef}
+            onMouseDown={handleUnaCordaPedalDepress}
+            onMouseUp={handleUnaCordaPedalRelease}
+          >
+            Una Corda
+          </button>
+          <button
+            type="button"
+            ref={sostenutoPedalRef}
+            onMouseDown={handleSostenutoPedalDepress}
+            onMouseUp={handleSostenutoPedalRelease}
+          >
+            Sostenuto
+          </button>
+          <button
+            type="button"
+            ref={sustainPedalRef}
+            onMouseDown={handleSustainPedalDepress}
+            onMouseUp={handleSustainPedalRelease}
+          >
+            Sustain
+          </button>
+        </div>
+        <div
+          className="keyboard"
+        >
+          <MusicalKeyboard
+            ref={keyboardRef}
+            labels={key => withLabels ? `${PITCH_NAMES[key.id % 12]}${Math.floor(key.id / 12) - 1}` : null}
+            onKeyOn={handleKeyOn}
+            onKeyOff={handleKeyOff}
+            startKey={startKeyProp}
+            endKey={endKeyProp}
+            accidentalKeyHeight="65%"
+            keyboardMapping={keyboardMapping}
+            naturalKeyColor="white"
+            accidentalKeyColor="black"
+          />
+        </div>
+      </div>
+    </React.Fragment>
   )
 }
 
