@@ -1,5 +1,6 @@
 import * as React from 'react'
 import * as PropTypes from 'prop-types'
+import { Midi, } from '@tonejs/midi'
 
 import MusicalKeyboard from 'react-musical-keyboard'
 
@@ -15,14 +16,15 @@ const App = ({
   generator = null,
   keyboardMapping = {},
 }) => {
-  const [withLabels, setWithLabels, ] = React.useState(false)
+  const [withLabels, ] = React.useState(false)
   const [sound, setSound, ] = React.useState(soundProp)
   const [sustain, setSustain, ] = React.useState(false)
   const [sostenuto, setSostenuto, ] = React.useState(false)
   const [unaCorda, setUnaCorda, ] = React.useState(false)
   const [notesOn, setNotesOn, ] = React.useState([])
-  const [mouseNotesOn, setMouseNotesOn, ] = React.useState([])
-  const [velocity, setVelocity, ] = React.useState(null)
+  const [, setMouseNotesOn, ] = React.useState([])
+  const [, setVelocity, ] = React.useState(null)
+  const timer = React.useRef(null)
 
   const soundRef = React.useRef(null)
   const sustainPedalRef = React.useRef(null)
@@ -115,28 +117,160 @@ const App = ({
     if ('sendMessage' in generator) {
       generator.sendMessage(64, sustain)
     }
-  }, [sustain, ])
+  }, [sustain, generator, ])
 
   React.useEffect(() => {
     if ('sendMessage' in generator) {
       generator.sendMessage(66, sostenuto)
     }
-  }, [sostenuto, ])
+  }, [sostenuto, generator, ])
 
   React.useEffect(() => {
     if ('sendMessage' in generator) {
       generator.sendMessage(67, unaCorda)
     }
-  }, [unaCorda, ])
+  }, [unaCorda, generator, ])
 
   React.useEffect(() => {
     generator.changeSound(sound)
     soundRef.current.value = sound
-  }, [sound, ])
+  }, [sound, generator, ])
 
   React.useEffect(() => {
     keepFocus()
   }, [])
+
+  React.useEffect(() => {
+    const handleDragOver = e => {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
+    const handleDrop = async e => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      const { files, } = e.dataTransfer
+      const [file, ] = files
+
+      if (timer.current !== null) {
+        window.clearInterval(timer.current)
+        if ('sendMessage' in generator) {
+          generator.sendMessage(120, 0)
+          generator.sendMessage(121, 0)
+          setNotesOn([])
+        }
+      }
+
+      if (file.type !== 'audio/mid') {
+        return
+      }
+
+      const midiData = await file.arrayBuffer()
+      const midi = new Midi(midiData)
+      console.log(midi)
+      const allMessages = [
+        ...midi.tracks.reduce(
+          (trackMessages, t, trackNumber) => [
+            ...trackMessages,
+            ...t.notes.map(n => [
+              [
+                n.ticks,
+                trackNumber,
+                'noteOn',
+                n.midi,
+                n.velocity
+              ],
+              [
+                n.ticks + n.durationTicks,
+                trackNumber,
+                'noteOff',
+                n.midi,
+                n.velocity,
+              ]
+            ]),
+            (
+              Object.keys(t.controlChanges)
+                .map(c => Number(c))
+                .filter(c => ![7, 10].includes(c))
+                .reduce(
+                  (controlChanges, c) => [
+                    ...controlChanges,
+                    ...t.controlChanges[c].map(d => [
+                      d.ticks,
+                      trackNumber,
+                      c,
+                      d.value
+                    ])
+                  ],
+                  []
+                )
+            )
+          ],
+          [],
+        )
+      ]
+        .reduce(
+          (allTheMessages, m) => [
+            ...allTheMessages,
+            ...m,
+          ],
+          []
+        )
+        .sort((a, b) => a[0] - b[0])
+
+      let ticksCounter = 0
+      let queueMessages = allMessages
+      timer.current = window.setInterval(() => {
+        ticksCounter += midi.header.ppq / 96
+        const playMessages = queueMessages.filter(m => m[0] <= ticksCounter)
+        playMessages.forEach(m => {
+          const [, , type, ...params] = m
+
+          switch (type) {
+            case 'noteOn':
+              generator.soundOn(
+                params[0],
+                params[1] * 0x7f,
+                getKeyFrequency(params[0], 69, 440)
+              )
+              setNotesOn(notes => [
+                ...notes,
+                params[0],
+              ])
+              break
+            case 'noteOff':
+              generator.soundOff(
+                params[0]
+              )
+              setNotesOn(notes => notes.filter(n => n !== params[0]))
+              break
+            default:
+              if ('sendMessage' in generator) {
+                generator.sendMessage(type, params[0])
+              }
+              break
+          }
+        })
+        queueMessages = allMessages.filter(m => m[0] > ticksCounter)
+        if (ticksCounter > midi.durationTicks) {
+          window.clearInterval(timer)
+          if ('sendMessage' in generator) {
+            generator.sendMessage(120, 0)
+            generator.sendMessage(121, 0)
+            setNotesOn([])
+          }
+        }
+      })
+    }
+
+    window.document.body.addEventListener('dragover', handleDragOver)
+    window.document.body.addEventListener('drop', handleDrop)
+    return () => {
+      window.document.body.removeEventListener('dragover', handleDragOver)
+      window.document.body.removeEventListener('drop', handleDrop)
+    }
+  }, [generator, ])
 
   return (
     <React.Fragment>
@@ -167,13 +301,7 @@ const App = ({
         </div>
       </div>
       <div
-        style={{
-          width: '100%',
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          borderColor: 'black',
-        }}
+        className="bottombar"
       >
         {
           'sendMessage' in generator
@@ -224,7 +352,7 @@ const App = ({
             accidentalKeyHeight="65%"
             keyboardMapping={keyboardMapping}
             naturalKeyColor="white"
-            accidentalKeyColor="black"
+            accidentalKeyColor="rgb(25, 25, 25)"
             notesOn={notesOn}
           />
         </div>

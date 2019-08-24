@@ -1238,6 +1238,14 @@
     "@svgr/plugin-svgo" "^4.0.3"
     loader-utils "^1.1.0"
 
+"@tonejs/midi@^2.0.7":
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/@tonejs/midi/-/midi-2.0.7.tgz#bf51b17d98fcd3b6c43fd01ae60ef9e44ca554da"
+  integrity sha512-Clh22AAhMoAVh5qfRqF4RGxBXzRqFKh0ist5Ppr+L/8dpEwWLJnWMEq3CrwHUI+B/gmFz2/i+TxuEywSUEuqMg==
+  dependencies:
+    array-flatten "^2.1.2"
+    midi-file "^1.1.1"
+
 "@types/babel__core@^7.1.0":
   version "7.1.2"
   resolved "https://registry.yarnpkg.com/@types/babel__core/-/babel__core-7.1.2.tgz#608c74f55928033fce18b99b213c16be4b3d114f"
@@ -1683,7 +1691,7 @@ array-flatten@1.1.1:
   resolved "https://registry.yarnpkg.com/array-flatten/-/array-flatten-1.1.1.tgz#9a5f699051b1e7073328f2a008968b64ea2955d2"
   integrity sha1-ml9pkFGx5wczKPKgCJaLZOopVdI=
 
-array-flatten@^2.1.0:
+array-flatten@^2.1.0, array-flatten@^2.1.2:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/array-flatten/-/array-flatten-2.1.2.tgz#24ef80a28c1a893617e2149b0c6d0d788293b099"
   integrity sha512-hNfzcOV8W4NdualtqBFPyVO+54DSJuZGY9qT4pRroB6S9e3iiido2ISIC5h9R2sPJ8H3FHCIiEnsv1lPXO3KtQ==
@@ -6012,6 +6020,11 @@ micromatch@^3.1.10, micromatch@^3.1.4, micromatch@^3.1.8:
     regex-not "^1.0.0"
     snapdragon "^0.8.1"
     to-regex "^3.0.2"
+
+midi-file@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/midi-file/-/midi-file-1.1.1.tgz#eb82876a2a7ac83174170e27bf57d4e2c8816112"
+  integrity sha512-HI6Y/kc9g1Af0OqMkTzI2AeGgPJMONgQcd/13gBf8C9BcUh7wa/AnXR1Fgl8SIuO7GJmFhSIACEWcwiAz2E2Pg==
 
 miller-rabin@^4.0.0:
   version "4.0.1"

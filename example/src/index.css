@@ -57,10 +57,30 @@ body {
 }
 
 .topbar {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   display: flex;
   justify-content: center;
+}
+
+.bottombar {
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  border-color: black;
+}
+
+html {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  margin: 0;
 }

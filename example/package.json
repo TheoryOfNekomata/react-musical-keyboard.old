@@ -5,6 +5,7 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
+    "@tonejs/midi": "^2.0.7",
     "prop-types": "link:../node_modules/prop-types",
     "react": "link:../node_modules/react",
     "react-dom": "link:../node_modules/react-dom",
