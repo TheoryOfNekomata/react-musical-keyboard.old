@@ -78,7 +78,7 @@ Storybook
           border: '1px solid',
         })}
         accidentalKeyStyle={pressed => ({
-          backgroundColor: pressed ? 'Highlight' : 'black',
+          backgroundColor: pressed ? 'Highlight' : 'currentColor',
           border: '1px solid',
         })}
         keysOn={keysOn[select(

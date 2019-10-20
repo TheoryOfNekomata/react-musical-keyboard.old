@@ -7,7 +7,7 @@ import getNaturalKeyIndexInOctave from './services/getNaturalKeyIndexInOctave'
  * A component for events that a controller with the likeness of a musical keyboard triggers (for instance, MIDI
  * events).
  */
-const MusicalKeyboard = ({
+const MusicalKeyboard = React.forwardRef(({
   startKey = 9,
   endKey = 96,
   style = {},
@@ -22,12 +22,70 @@ const MusicalKeyboard = ({
   accidentalKeyStyle = () => ({}),
   orientation = 'normal',
   ...props
-}) => {
-  const keyboardRef = React.useRef(null)
+}, ref) => {
+  const keyboardRef = ref || React.useRef(null)
   const [, setKeyboardKeys, ] = React.useState([])
   const [octaveKeys, setOctaveKeys, ] = React.useState({})
   const [keys, setKeys, ] = React.useState({})
   const theOctaveKeys = Object.entries(octaveKeys)
+
+  let heightAttribute
+  let widthAttribute
+  let flexDirection
+  let topAttribute
+  let leftAttribute
+  let marginLeftAttribute
+  let marginRightAttribute
+  let clientYAttribute
+  let offsetHeightAttribute
+
+  switch (orientation) {
+    default:
+    case 'normal':
+      heightAttribute = 'height'
+      widthAttribute = 'width'
+      flexDirection = 'row'
+      topAttribute = 'top'
+      leftAttribute = 'left'
+      marginLeftAttribute = 'marginLeft'
+      marginRightAttribute = 'marginRight'
+      clientYAttribute = 'clientY'
+      offsetHeightAttribute = 'offsetHeight'
+      break
+    case 'rotate-180':
+      heightAttribute = 'height'
+      widthAttribute = 'width'
+      flexDirection = 'row-reverse'
+      topAttribute = 'bottom'
+      leftAttribute = 'right'
+      marginLeftAttribute = 'marginRight'
+      marginRightAttribute = 'marginLeft'
+      clientYAttribute = 'clientY'
+      offsetHeightAttribute = 'offsetHeight'
+      break
+    case 'rotate-90':
+      heightAttribute = 'width'
+      widthAttribute = 'height'
+      flexDirection = 'column-reverse'
+      topAttribute = 'left'
+      leftAttribute = 'bottom'
+      marginLeftAttribute = 'marginBottom'
+      marginRightAttribute = 'marginTop'
+      clientYAttribute = 'clientX'
+      offsetHeightAttribute = 'offsetWidth'
+      break
+    case 'rotate-270':
+      heightAttribute = 'width'
+      widthAttribute = 'height'
+      flexDirection = 'column'
+      topAttribute = 'right'
+      leftAttribute = 'top'
+      marginLeftAttribute = 'marginTop'
+      marginRightAttribute = 'marginBottom'
+      clientYAttribute = 'clientX'
+      offsetHeightAttribute = 'offsetWidth'
+      break
+  }
 
   const triggerKeyOn = source => (key, noteVelocity) => {
     const { current = null, } = keyboardRef
@@ -66,24 +124,26 @@ const MusicalKeyboard = ({
   }
 
   const handleMouseEnter = key => e => {
-    const { buttons, clientY, target, } = e
+    const { buttons, [clientYAttribute]: clientY, target, } = e
+    const { [offsetHeightAttribute]: offsetHeight, } = target
     const { current, } = keyboardRef
-    const { top, } = current.getBoundingClientRect()
+    const { [topAttribute]: top, } = current.getBoundingClientRect()
     const offsetY = clientY - top
     if (buttons === 1) {
-      triggerKeyOn('mouse')(key, offsetY / target.offsetHeight)
+      triggerKeyOn('mouse')(key, offsetY / offsetHeight)
     }
   }
 
   const handleMouseClick = key => e => {
-    const { buttons, clientY, target, } = e
+    const { buttons, [clientYAttribute]: clientY, target, } = e
+    const { [offsetHeightAttribute]: offsetHeight, } = target
     const { current, } = keyboardRef
-    const { top, } = current.getBoundingClientRect()
+    const { [topAttribute]: top, } = current.getBoundingClientRect()
     const offsetY = clientY - top
     if (buttons === 1) {
       e.preventDefault()
       current.focus()
-      triggerKeyOn('mouse')(key, offsetY / target.offsetHeight)
+      triggerKeyOn('mouse')(key, offsetY / offsetHeight)
     }
   }
 
@@ -173,54 +233,6 @@ const MusicalKeyboard = ({
       window.removeEventListener('keyup', handleKeyUp, true)
     }
   }, [keyboardMapping, triggerKeyOff, ])
-
-  let heightAttribute
-  let widthAttribute
-  let flexDirection
-  let topAttribute
-  let leftAttribute
-  let marginLeftAttribute
-  let marginRightAttribute
-
-  switch (orientation) {
-    default:
-    case 'normal':
-      heightAttribute = 'height'
-      widthAttribute = 'width'
-      flexDirection = 'row'
-      topAttribute = 'top'
-      leftAttribute = 'left'
-      marginLeftAttribute = 'marginLeft'
-      marginRightAttribute = 'marginRight'
-      break
-    case 'rotate-180':
-      heightAttribute = 'height'
-      widthAttribute = 'width'
-      flexDirection = 'row-reverse'
-      topAttribute = 'bottom'
-      leftAttribute = 'right'
-      marginLeftAttribute = 'marginRight'
-      marginRightAttribute = 'marginLeft'
-      break
-    case 'rotate-90':
-      heightAttribute = 'width'
-      widthAttribute = 'height'
-      flexDirection = 'column-reverse'
-      topAttribute = 'left'
-      leftAttribute = 'bottom'
-      marginLeftAttribute = 'marginBottom'
-      marginRightAttribute = 'marginTop'
-      break
-    case 'rotate-270':
-      heightAttribute = 'width'
-      widthAttribute = 'height'
-      flexDirection = 'column'
-      topAttribute = 'right'
-      leftAttribute = 'top'
-      marginLeftAttribute = 'marginTop'
-      marginRightAttribute = 'marginBottom'
-      break
-  }
 
   const allKeys = Object
     .values(octaveKeys)
@@ -357,7 +369,7 @@ const MusicalKeyboard = ({
       }
     </div>
   )
-}
+})
 
 MusicalKeyboard.propTypes = {
   /** The starting key number of the keyboard. */

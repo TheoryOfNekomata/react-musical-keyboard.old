@@ -12,7 +12,6 @@ const App = ({
   startKey: startKeyProp = 21,
   endKey: endKeyProp = 108,
   sound: soundProp = 0,
-  sounds = [],
   generator = null,
   keyboardMapping = {},
 }) => {
@@ -22,6 +21,8 @@ const App = ({
   const [sostenuto, setSostenuto, ] = React.useState(false)
   const [unaCorda, setUnaCorda, ] = React.useState(false)
   const [notesOn, setNotesOn, ] = React.useState([])
+  const [innerWidth, setInnerWidth, ] = React.useState(window.innerWidth)
+  const [innerHeight, setInnerHeight, ] = React.useState(window.innerHeight)
   const [, setMouseNotesOn, ] = React.useState([])
   const [, setVelocity, ] = React.useState(null)
   const timer = React.useRef(null)
@@ -34,7 +35,10 @@ const App = ({
 
   const keepFocus = () => {
     window.setTimeout(() => {
-      keyboardRef.current.focus()
+      const { current = null, } = keyboardRef
+      if (current !== null) {
+        current.focus()
+      }
     })
   }
 
@@ -264,11 +268,20 @@ const App = ({
       })
     }
 
+    const handleResize = e => {
+      const { innerWidth, innerHeight, } = e.target
+
+      setInnerWidth(innerWidth)
+      setInnerHeight(innerHeight)
+    }
+
     window.document.body.addEventListener('dragover', handleDragOver)
     window.document.body.addEventListener('drop', handleDrop)
+    window.addEventListener('resize', handleResize)
     return () => {
       window.document.body.removeEventListener('dragover', handleDragOver)
       window.document.body.removeEventListener('drop', handleDrop)
+      window.removeEventListener('resize', handleResize)
     }
   }, [generator, ])
 
@@ -300,63 +313,71 @@ const App = ({
           </label>
         </div>
       </div>
-      <div
-        className="bottombar"
-      >
-        {
-          'sendMessage' in generator
-          && (
-            <div
-              className="pedals"
+      {
+        'sendMessage' in generator
+        && (
+          <div
+            className="pedals"
+          >
+            <button
+              type="button"
+              ref={unaCordaPedalRef}
+              onMouseDown={handleUnaCordaPedalDepress}
+              onMouseUp={handleUnaCordaPedalRelease}
+              onMouseLeave={handleUnaCordaPedalRelease}
             >
-              <button
-                type="button"
-                ref={unaCordaPedalRef}
-                onMouseDown={handleUnaCordaPedalDepress}
-                onMouseUp={handleUnaCordaPedalRelease}
-                onMouseLeave={handleUnaCordaPedalRelease}
-              >
-                Una Corda
-              </button>
-              <button
-                type="button"
-                ref={sostenutoPedalRef}
-                onMouseDown={handleSostenutoPedalDepress}
-                onMouseUp={handleSostenutoPedalRelease}
-                onMouseLeave={handleSostenutoPedalRelease}
-              >
-                Sostenuto
-              </button>
-              <button
-                type="button"
-                ref={sustainPedalRef}
-                onMouseDown={handleSustainPedalDepress}
-                onMouseUp={handleSustainPedalRelease}
-                onMouseLeave={handleSustainPedalRelease}
-              >
-                Sustain
-              </button>
-            </div>
-          )
-        }
-        <div
-          className="keyboard"
-        >
-          <MusicalKeyboard
-            ref={keyboardRef}
-            labels={key => withLabels ? `${PITCH_NAMES[key.id % 12]}${Math.floor(key.id / 12) - 1}` : null}
-            onKeyOn={handleKeyOn}
-            onKeyOff={handleKeyOff}
-            startKey={startKeyProp}
-            endKey={endKeyProp}
-            accidentalKeyHeight="65%"
-            keyboardMapping={keyboardMapping}
-            naturalKeyColor="white"
-            accidentalKeyColor="rgb(25, 25, 25)"
-            notesOn={notesOn}
-          />
-        </div>
-      </div>
+              Una Corda
+            </button>
+            <button
+              type="button"
+              ref={sostenutoPedalRef}
+              onMouseDown={handleSostenutoPedalDepress}
+              onMouseUp={handleSostenutoPedalRelease}
+              onMouseLeave={handleSostenutoPedalRelease}
+            >
+              Sostenuto
+            </button>
+            <button
+              type="button"
+              ref={sustainPedalRef}
+              onMouseDown={handleSustainPedalDepress}
+              onMouseUp={handleSustainPedalRelease}
+              onMouseLeave={handleSustainPedalRelease}
+            >
+              Sustain
+            </button>
+          </div>
+        )
+      }
+      <MusicalKeyboard
+        ref={keyboardRef}
+        labels={key => withLabels ? `${PITCH_NAMES[key.id % 12]}${Math.floor(key.id / 12) - 1}` : null}
+        onKeyOn={handleKeyOn}
+        onKeyOff={handleKeyOff}
+        startKey={startKeyProp}
+        endKey={endKeyProp}
+        accidentalKeyHeight="65%"
+        keyboardMapping={keyboardMapping}
+        orientation={innerWidth < innerHeight ? 'rotate-90' : 'normal'}
+        style={{
+          height: innerWidth < innerHeight ? '100%' : '5vw',
+          width: innerWidth < innerHeight ? '5vh' : '100%',
+          color: '#000',
+          outline: 'none',
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+        }}
+        naturalKeyStyle={pressed => ({
+          backgroundColor: pressed ? 'Highlight' : 'white',
+          border: '1px solid',
+        })}
+        accidentalKeyStyle={pressed => ({
+          backgroundColor: pressed ? 'Highlight' : 'currentColor',
+          border: '1px solid',
+        })}
+        keysOn={notesOn}
+      />
     </React.Fragment>
   )
 }
@@ -365,7 +386,6 @@ App.propTypes = {
   startKey: PropTypes.number,
   endKey: PropTypes.number,
   sound: PropTypes.number,
-  sounds: PropTypes.arrayOf(PropTypes.number),
   generator: PropTypes.object,
   keyboardMapping: PropTypes.object,
 }
