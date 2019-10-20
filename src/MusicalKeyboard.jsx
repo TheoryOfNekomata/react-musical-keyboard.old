@@ -1,13 +1,13 @@
 import * as React from 'react'
 import * as PropTypes from 'prop-types'
-import tinycolor from 'tinycolor2'
 
-import isNaturalKey from './services/isNaturalKey'
-import computeNaturalKeyMarginLeft from './services/computeNaturalKeyMarginLeft'
-import computeNaturalKeyMarginRight from './services/computeNaturalKeyMarginRight'
-import getOctaveAdjustment from './services/getOctaveAdjustment'
+import getNaturalKeyIndexInOctave from './services/getNaturalKeyIndexInOctave'
 
-const MusicalKeyboard = React.forwardRef(({
+/**
+ * A component for events that a controller with the likeness of a musical keyboard triggers (for instance, MIDI
+ * events).
+ */
+const MusicalKeyboard = ({
   startKey = 9,
   endKey = 96,
   style = {},
@@ -17,29 +17,24 @@ const MusicalKeyboard = React.forwardRef(({
   keyboardMapping = null,
   accidentalKeyHeight = '60%',
   keyboardVelocity = 0.75,
-  naturalKeyColor = 'white',
-  accidentalKeyColor = 'black',
-  notesOn = [],
+  keysOn = [],
+  naturalKeyStyle = () => ({}),
+  accidentalKeyStyle = () => ({}),
+  orientation = 'normal',
   ...props
-}, ref) => {
-  const keyboardRef = ref || React.useRef(null)
+}) => {
+  const keyboardRef = React.useRef(null)
   const [, setKeyboardKeys, ] = React.useState([])
   const [octaveKeys, setOctaveKeys, ] = React.useState({})
   const [keys, setKeys, ] = React.useState({})
-  const [, setMouseNotesOn, ] = React.useState([])
   const theOctaveKeys = Object.entries(octaveKeys)
-  const naturalKeysLength = Object
-    .values(octaveKeys)
-    .reduce((k, l) => [...k, ...l], [])
-    .filter(p => isNaturalKey(p))
-    .length
-  const [, setMouseVelocity, ] = React.useState(null)
 
   const triggerKeyOn = source => (key, noteVelocity) => {
-    if (onKeyOn) {
+    const { current = null, } = keyboardRef
+    if (onKeyOn && current !== null) {
       onKeyOn({
         target: {
-          ...keyboardRef.current,
+          ...current,
           value: {
             ...key,
             velocity: noteVelocity,
@@ -50,17 +45,18 @@ const MusicalKeyboard = React.forwardRef(({
     }
   }
 
-  const triggerKeyOff = source => key => {
-    if (onKeyOff) {
+  const triggerKeyOff = React.useCallback(source => key => {
+    const { current = null, } = keyboardRef
+    if (onKeyOff && current !== null) {
       onKeyOff({
         target: {
-          ...keyboardRef.current,
+          ...current,
           value: key,
         },
         source,
       })
     }
-  }
+  }, [onKeyOff, ])
 
   const handleMouseLeave = key => e => {
     const { buttons, } = e
@@ -71,7 +67,8 @@ const MusicalKeyboard = React.forwardRef(({
 
   const handleMouseEnter = key => e => {
     const { buttons, clientY, target, } = e
-    const { top, } = keyboardRef.current.getBoundingClientRect()
+    const { current, } = keyboardRef
+    const { top, } = current.getBoundingClientRect()
     const offsetY = clientY - top
     if (buttons === 1) {
       triggerKeyOn('mouse')(key, offsetY / target.offsetHeight)
@@ -80,11 +77,12 @@ const MusicalKeyboard = React.forwardRef(({
 
   const handleMouseClick = key => e => {
     const { buttons, clientY, target, } = e
-    const { top, } = keyboardRef.current.getBoundingClientRect()
+    const { current, } = keyboardRef
+    const { top, } = current.getBoundingClientRect()
     const offsetY = clientY - top
     if (buttons === 1) {
       e.preventDefault()
-      keyboardRef.current.focus()
+      current.focus()
       triggerKeyOn('mouse')(key, offsetY / target.offsetHeight)
     }
   }
@@ -122,145 +120,7 @@ const MusicalKeyboard = React.forwardRef(({
     })
   }
 
-  const handleKeyUp = e => {
-    const {
-      altKey,
-      shiftKey,
-      ctrlKey,
-      metaKey,
-      keyCode,
-    } = e
-    if (altKey || shiftKey || ctrlKey || metaKey) {
-      return
-    }
-    if (keyboardMapping && keyboardMapping[keyCode]) {
-      e.preventDefault()
-    } else {
-      return
-    }
-    setKeyboardKeys(c => {
-      const theKey = keyboardMapping[keyCode]
-      if (keyboardMapping !== null && theKey) {
-        triggerKeyOff(false)({ id: theKey, })
-      }
-      return c.filter(code => code !== keyCode)
-    })
-  }
-
-  const computeKeyClickAreaStyle = (key, i, octavePitches) => {
-    const naturalKey = isNaturalKey(key)
-    const isFirstKey = octavePitches[0].id === key.id
-    const isLastKey = octavePitches[octavePitches.length - 1].id === key.id
-    const naturalKeyOctavePitches = octavePitches.filter(p => isNaturalKey(p))
-    return {
-      borderRadius: naturalKey ? '0 0 2% 2%' : '0 0 10% 10%',
-      display: 'inline-block',
-      verticalAlign: 'top',
-      boxSizing: 'border-box',
-      borderLeft: '1px solid black',
-      borderBottom: naturalKey ? null : '1px solid black',
-      marginLeft: naturalKey && !isFirstKey ? `-${100 * (1 / octavePitches.length) * getOctaveAdjustment(octavePitches[0]) * computeNaturalKeyMarginLeft(key)}%` : null,
-      marginRight: naturalKey && !isLastKey ? `-${100 * (1 / octavePitches.length) * getOctaveAdjustment(octavePitches[0]) * computeNaturalKeyMarginRight(key)}%` : null,
-      width: naturalKey ? `${100 / naturalKeyOctavePitches.length}%` : `${100 / naturalKeyOctavePitches.length / 12 * 7}%`,
-      height: naturalKey ? '100%' : accidentalKeyHeight,
-      cursor: 'pointer',
-      position: 'relative',
-      zIndex: naturalKey ? 0 : 1,
-      backgroundColor: 'black',
-    }
-  }
-
-  const isPressed = key => Array.isArray(notesOn) && notesOn.includes(key.id)
-
-  const computePressedKeyBackgroundImage = key => {
-    const naturalKey = isNaturalKey(key)
-
-    return (
-      naturalKey
-        ? `linear-gradient(to bottom, ${naturalKeyColor}, ${tinycolor(naturalKeyColor).setAlpha(0.9).toRgbString()})`
-        : `linear-gradient(to bottom, ${accidentalKeyColor}, ${tinycolor(accidentalKeyColor).setAlpha(0.9).toRgbString()})`
-    )
-  }
-
-  const computeNotPressedKeyBackgroundImage = key => {
-    const naturalKey = isNaturalKey(key)
-    return (
-      naturalKey
-        ? `linear-gradient(to bottom, ${naturalKeyColor}, ${naturalKeyColor})`
-        : `linear-gradient(to bottom, ${accidentalKeyColor}, ${accidentalKeyColor})`
-    )
-  }
-
-  const computeBackgroundImage = key => (
-    isPressed(key)
-      ? computePressedKeyBackgroundImage(key)
-      : computeNotPressedKeyBackgroundImage(key)
-  )
-
-  const computePressedBoxShadow = key => (
-    isNaturalKey(key)
-      ? `0 0 4px 16px rgba(255,255,255,0) inset, 0 0 4px rgba(0,0,0,0.0), 2px -2px 1px -1px rgba(0,0,0,0.25) inset`
-      : `0 0 4px rgba(0,0,0,0), 1px -1px 4px rgba(0,0,0,1) inset, -1.5px -2px 1px rgba(0,0,0,0.5) inset, 1.5px -1px 1px rgba(255,255,255,0.75) inset`
-  )
-
-  const computeNotPressedBoxShadow = key => (
-    isNaturalKey(key)
-      ? `0 0 4px 16px ${naturalKeyColor} inset, 0 0 4px rgba(0,0,0,0.75), 2px -2px 1px -1px rgba(0,0,0,0.25) inset`
-      : `0 0 4px rgba(0,0,0,0.75), 1px -2px 4px ${tinycolor(accidentalKeyColor).darken(12).toRgbString()} inset, -2px -4px 1px ${tinycolor(accidentalKeyColor).darken(20).toRgbString()} inset, 2px -4px 1px rgba(255,255,255,0.75) inset`
-  )
-
-  const computeBoxShadow = key => (
-    isPressed(key)
-      ? computePressedBoxShadow(key)
-      : computeNotPressedBoxShadow(key)
-  )
-
-  const computeColor = key => (
-    isNaturalKey(key)
-      ? 'var(--white-key-foreground-color)'
-      : 'var(--black-key-foreground-color)'
-  )
-
-  const computeTransform = key => (
-    isPressed(key)
-      ? 'rotateX(10deg)'
-      : 'rotateX(0deg)'
-  )
-
-  const computeKeyDisplayStyle = key => ({
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    border: 0,
-    padding: '0 0 1rem 0',
-    width: '100%',
-    height: '100%',
-    borderRadius: '0 0 2px 2px',
-    backgroundImage: computeBackgroundImage(key),
-    boxShadow: computeBoxShadow(key),
-    color: computeColor(key),
-    transform: computeTransform(key),
-    transformOrigin: 'top',
-    textAlign: 'center',
-    boxSizing: 'border-box',
-    position: 'relative',
-  })
-
-  const computeKeyLabelStyle = key => {
-    const naturalKey = isNaturalKey(key)
-    return {
-      position: 'absolute',
-      bottom: '0.5rem',
-      pointerEvents: 'none',
-      filter: naturalKey ? null : 'invert(100%)',
-      transform: naturalKey ? null : 'rotate(90deg)',
-      transformOrigin: naturalKey ? null : 'top right',
-      fontSize: '75%',
-      width: '100%',
-      textAlign: 'center',
-      lineHeight: 1.5,
-    }
-  }
+  const isPressed = key => Array.isArray(keysOn) && keysOn.includes(key.id)
 
   React.useEffect(() => {
     const theOctaveKeys = {}
@@ -283,23 +143,111 @@ const MusicalKeyboard = React.forwardRef(({
   }, [startKey, endKey, ])
 
   React.useEffect(() => {
+    const handleKeyUp = e => {
+      const {
+        altKey,
+        shiftKey,
+        ctrlKey,
+        metaKey,
+        keyCode,
+      } = e
+      if (altKey || shiftKey || ctrlKey || metaKey) {
+        return
+      }
+      if (keyboardMapping && keyboardMapping[keyCode]) {
+        e.preventDefault()
+      } else {
+        return
+      }
+      setKeyboardKeys(c => {
+        const theKey = keyboardMapping[keyCode]
+        if (keyboardMapping !== null && theKey) {
+          triggerKeyOff(false)({ id: theKey, })
+        }
+        return c.filter(code => code !== keyCode)
+      })
+    }
+
     window.addEventListener('keyup', handleKeyUp, true)
     return () => {
       window.removeEventListener('keyup', handleKeyUp, true)
     }
-  }, [])
+  }, [keyboardMapping, triggerKeyOff, ])
+
+  let heightAttribute
+  let widthAttribute
+  let flexDirection
+  let topAttribute
+  let leftAttribute
+  let marginLeftAttribute
+  let marginRightAttribute
+
+  switch (orientation) {
+    default:
+    case 'normal':
+      heightAttribute = 'height'
+      widthAttribute = 'width'
+      flexDirection = 'row'
+      topAttribute = 'top'
+      leftAttribute = 'left'
+      marginLeftAttribute = 'marginLeft'
+      marginRightAttribute = 'marginRight'
+      break
+    case 'rotate-180':
+      heightAttribute = 'height'
+      widthAttribute = 'width'
+      flexDirection = 'row-reverse'
+      topAttribute = 'bottom'
+      leftAttribute = 'right'
+      marginLeftAttribute = 'marginRight'
+      marginRightAttribute = 'marginLeft'
+      break
+    case 'rotate-90':
+      heightAttribute = 'width'
+      widthAttribute = 'height'
+      flexDirection = 'column-reverse'
+      topAttribute = 'left'
+      leftAttribute = 'bottom'
+      marginLeftAttribute = 'marginBottom'
+      marginRightAttribute = 'marginTop'
+      break
+    case 'rotate-270':
+      heightAttribute = 'width'
+      widthAttribute = 'height'
+      flexDirection = 'column'
+      topAttribute = 'right'
+      leftAttribute = 'top'
+      marginLeftAttribute = 'marginTop'
+      marginRightAttribute = 'marginBottom'
+      break
+  }
+
+  const allKeys = Object
+    .values(octaveKeys)
+    .reduce(
+      (allOctaveKeys, keys) => [
+        ...allOctaveKeys,
+        ...keys,
+      ],
+      []
+    )
+
+  const allNaturalKeys = allKeys.filter(k => getNaturalKeyIndexInOctave(k) !== null)
 
   return (
     <div
       {...props}
       style={{
+        [widthAttribute]: '100%',
+        [heightAttribute]: 100,
+        minHeight: orientation === 'rotate-90' || orientation === 'rotate-270' ? '100vw' : null,
         ...style,
-        backgroundColor: 'black',
+        lineHeight: 0,
+        backgroundColor: 'currentColor',
         boxSizing: 'border-box',
-        borderWidth: '1px 0',
-        borderStyle: 'solid',
-        userSelect: 'none',
         overflow: 'hidden',
+        display: 'flex',
+        flexDirection,
       }}
       ref={keyboardRef}
       tabIndex={0}
@@ -310,35 +258,97 @@ const MusicalKeyboard = React.forwardRef(({
           <div
             key={octave}
             style={{
-              display: 'inline-block',
-              verticalAlign: 'top',
-              height: '100%',
-              whiteSpace: 'nowrap',
+              [widthAttribute]: 0,
+              flex: 'auto',
               boxSizing: 'border-box',
-              marginRight: octaveIndex === octaves.length - 1 ? '-1px' : null,
-              width: `${pitches.filter(p => isNaturalKey(p)).length / naturalKeysLength * 100}%`,
+              [heightAttribute]: '100%',
+              position: 'relative',
+              [marginLeftAttribute]:
+                octaveIndex !== 0
+                  ? null
+                  : `${
+                    -100 * (
+                      (7 - pitches.filter(p => getNaturalKeyIndexInOctave(p) !== null).length) / (getNaturalKeyIndexInOctave(pitches[0]) ? allNaturalKeys.length : allNaturalKeys.length - 1)
+                    )
+                  }%`,
+              [marginRightAttribute]:
+                octaveIndex !== octaves.length - 1
+                  ? null
+                  : `${
+                    -100 * (
+                      (7 - pitches.filter(p => getNaturalKeyIndexInOctave(p) !== null).length) / (getNaturalKeyIndexInOctave(pitches.slice(-1)[0]) ? allNaturalKeys.length : allNaturalKeys.length - 1)
+                    )
+                  }%`,
             }}
           >
             {
-              pitches.map((key, i, octavePitches) => (
+              pitches.map(key => (
                 <div
                   key={key.id}
-                  style={computeKeyClickAreaStyle(key, i, octavePitches)}
+                  style={{
+                    position: 'absolute',
+                    boxSizing: 'border-box',
+                    [topAttribute]: 0,
+                    [leftAttribute]:
+                      getNaturalKeyIndexInOctave(key) !== null
+                        ? `${100 * (getNaturalKeyIndexInOctave(key) / 7)}%`
+                        : `${100 * (key.id % 12 / 12)}%`,
+                    [widthAttribute]:
+                      getNaturalKeyIndexInOctave(key) !== null
+                        ? `${100 / 7}%`
+                        : `${100 / 12}%`,
+                    [heightAttribute]:
+                      getNaturalKeyIndexInOctave(key) !== null
+                        ? '100%'
+                        : accidentalKeyHeight,
+                    zIndex: getNaturalKeyIndexInOctave(key) !== null ? 0 : 1,
+                  }}
                   onMouseDown={handleMouseClick(key)}
                   onMouseEnter={handleMouseEnter(key)}
                   onMouseLeave={handleMouseLeave(key)}
                   onMouseUp={handleMouseUp(key)}
                 >
                   <div
-                    style={computeKeyDisplayStyle(key)}
+                    style={{
+                      ...(
+                        getNaturalKeyIndexInOctave(key) !== null
+                          ? naturalKeyStyle(isPressed(key))
+                          : accidentalKeyStyle(isPressed(key))
+                      ),
+                      width: '100%',
+                      height: '100%',
+                      boxSizing: 'border-box',
+                    }}
                   />
-                  <div
-                    style={computeKeyLabelStyle(key)}
-                  >
-                    {
-                      labels === null ? null : labels(key)
-                    }
-                  </div>
+                  {
+                    labels !== null
+                    && (
+                      <div
+                        style={{
+                          [widthAttribute]: '100%',
+                          [heightAttribute]: accidentalKeyHeight,
+                          position: 'absolute',
+                          [topAttribute]: '50%',
+                          [leftAttribute]: 0,
+                          display: 'flex',
+                          flexDirection,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          filter: getNaturalKeyIndexInOctave(key) !== null ? null : 'invert(100%)',
+                          fontSize: '1vw',
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        <div
+                          style={{
+                            transform: getNaturalKeyIndexInOctave(key) !== null || !'normal rotate-180'.split(' ').includes(orientation) ? null : 'rotate(90deg)',
+                          }}
+                        >
+                          {labels(key)}
+                        </div>
+                      </div>
+                    )
+                  }
                 </div>
               ))
             }
@@ -347,21 +357,35 @@ const MusicalKeyboard = React.forwardRef(({
       }
     </div>
   )
-})
+}
 
 MusicalKeyboard.propTypes = {
+  /** The starting key number of the keyboard. */
   startKey: PropTypes.number,
+  /** The ending key number of the keyboard. */
   endKey: PropTypes.number,
-  style: PropTypes.shape(),
+  /** The outer style of the keyboard. */
+  style: PropTypes.object,
+  /** Event handler that triggers when a key is activated. */
   onKeyOn: PropTypes.func,
+  /** Event handler that triggers when a key is deactivated. */
   onKeyOff: PropTypes.func,
+  /** Textual labels for each key. */
   labels: PropTypes.func,
-  keyboardMapping: PropTypes.shape(),
+  /** Keyboard mapping from key code to key number. */
+  keyboardMapping: PropTypes.object,
+  /** The length of the accidental keys with respect to the length of the keyboard. */
   accidentalKeyHeight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  /** The velocity of the key when the keyboard is used to activate the key. */
   keyboardVelocity: PropTypes.number,
-  naturalKeyColor: PropTypes.string,
-  accidentalKeyColor: PropTypes.string,
-  notesOn: PropTypes.arrayOf(PropTypes.number),
+  /** The style of the natural keys. */
+  naturalKeyStyle: PropTypes.func,
+  /** The style of the accidental (flat/sharp) keys. */
+  accidentalKeyStyle: PropTypes.func,
+  /** The orientation of the keyboard. */
+  orientation: PropTypes.oneOf(['normal', 'rotate-90', 'rotate-180', 'rotate-270']),
+  /** The array of activated keys via their key numbers. */
+  keysOn: PropTypes.arrayOf(PropTypes.number),
 }
 
 export default MusicalKeyboard

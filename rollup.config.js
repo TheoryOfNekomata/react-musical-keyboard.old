@@ -31,9 +31,50 @@ export default {
     svgr(),
     babel({
       exclude: 'node_modules/**',
-      plugins: [ 'external-helpers' ]
     }),
     resolve(),
-    commonjs()
+    commonjs({
+      namedExports: {
+        react: [
+          'createElement',
+          'cloneElement',
+          'createContext',
+          'Children',
+          'Component',
+          'PureComponent',
+          'Fragment',
+          'useContext',
+          'useReducer',
+          'useEffect',
+          'useRef',
+          'useState',
+          'useCallback',
+          'useMemo',
+          'useLayoutEffect',
+          'forwardRef',
+          'isValidElement'
+        ],
+        'prop-types': [
+          'array',
+          'bool',
+          'func',
+          'number',
+          'object',
+          'string',
+          'symbol',
+          'any',
+          'arrayOf',
+          'element',
+          'elementType',
+          'instanceOf',
+          'node',
+          'objectOf',
+          'oneOf',
+          'oneOfType',
+          'shape',
+          'exact'
+        ]
+      }
+    })
   ]
 }

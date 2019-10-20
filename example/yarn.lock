@@ -7656,6 +7656,10 @@ prompts@^2.0.1:
     kleur "^3.0.2"
     sisteransi "^1.0.0"
 
+prop-types@15.7.2:
+  version "0.0.0"
+  uid ""
+
 prop-types@^15.6.2:
   version "0.0.0"
   uid ""
@@ -7854,6 +7858,10 @@ react-dev-utils@^9.0.1:
     strip-ansi "5.2.0"
     text-table "0.2.0"
 
+react-dom@16.8.6:
+  version "0.0.0"
+  uid ""
+
 "react-dom@link:../node_modules/react-dom":
   version "0.0.0"
   uid ""
@@ -7872,7 +7880,7 @@ react-is@^16.8.1, react-is@^16.8.4:
   version "0.0.0"
   uid ""
 
-react-scripts@^3.0.1:
+react-scripts@3.0.1, react-scripts@^3.0.1:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/react-scripts/-/react-scripts-3.0.1.tgz#e5565350d8069cc9966b5998d3fe3befe3d243ac"
   integrity sha512-LKEjBhVpEB+c312NeJhzF+NATxF7JkHNr5GhtwMeRS1cMeLElMeIu8Ye7WGHtDP7iz7ra4ryy48Zpo6G/cwWUw==
@@ -7931,6 +7939,10 @@ react-scripts@^3.0.1:
     workbox-webpack-plugin "4.2.0"
   optionalDependencies:
     fsevents "2.0.6"
+
+react@16.8.6:
+  version "0.0.0"
+  uid ""
 
 "react@link:../node_modules/react":
   version "0.0.0"
@@ -9094,11 +9106,6 @@ timsort@^0.3.0:
   version "0.3.0"
   resolved "https://registry.yarnpkg.com/timsort/-/timsort-0.3.0.tgz#405411a8e7e6339fe64db9a234de11dc31e02bd4"
   integrity sha1-QFQRqOfmM5/mTbmiNN4R3DHgK9Q=
-
-tinycolor2@^1.4.1:
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/tinycolor2/-/tinycolor2-1.4.1.tgz#f4fad333447bc0b07d4dc8e9209d8f39a8ac77e8"
-  integrity sha1-9PrTM0R7wLB9TcjpIJ2POaisd+g=
 
 tmp@^0.0.33:
   version "0.0.33"
