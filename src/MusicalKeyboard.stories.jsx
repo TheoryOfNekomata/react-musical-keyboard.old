@@ -48,7 +48,7 @@ const keyboardLength = {
 }
 
 Storybook
-  .storiesOf('react-musical-keyboard', module)
+  .storiesOf('React Musical Keyboard', module)
   .add('MusicalKeyboard', () => {
     const [startKey, endKey, ] = ranges[select(
       'Range',
@@ -71,7 +71,7 @@ Storybook
       <MusicalKeyboard
         startKey={startKey}
         endKey={endKey}
-        accidentalKeyHeight={`${number('Accidental key height', 65, { range: true, min: 1, max: 100, })}%`}
+        accidentalKeyHeight={number('Accidental key height', 65, { range: true, min: 1, max: 100, })}
         orientation={orientation}
         naturalKeyStyle={pressed => ({
           backgroundColor: pressed ? 'Highlight' : 'white',

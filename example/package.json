@@ -10,7 +10,8 @@
     "react": "link:../node_modules/react",
     "react-dom": "link:../node_modules/react-dom",
     "react-musical-keyboard": "link:..",
-    "react-scripts": "^3.0.1"
+    "react-scripts": "^3.0.1",
+    "styled-components": "^4.4.1"
   },
   "scripts": {
     "start": "react-scripts start",

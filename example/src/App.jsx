@@ -1,12 +1,38 @@
 import * as React from 'react'
 import * as PropTypes from 'prop-types'
 import { Midi, } from '@tonejs/midi'
+import styled from 'styled-components'
 
 import MusicalKeyboard from 'react-musical-keyboard'
 
 import getKeyFrequency from './services/getKeyFrequency'
 
 const PITCH_NAMES = 'C C# D D# E F F# G G# A A# B'.split(' ')
+
+const KeyboardContainer = styled('div')({
+  height: '30vw',
+  width: '100%',
+  color: '#000',
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  '@media (min-width: 720px)': {
+    height: '15vw',
+    width: '100%',
+  },
+  '@media (orientation: portrait)': {
+    height: '100%',
+    width: '5vh',
+  },
+})
+
+const KeyboardContainerContent = styled('div')({
+  width: '500%',
+  height: '100%',
+  '@media (min-width: 720px)': {
+    width: '100%',
+  },
+})
 
 const App = ({
   startKey: startKeyProp = 21,
@@ -15,6 +41,7 @@ const App = ({
   generator = null,
   keyboardMapping = {},
 }) => {
+  const [scrollEnabled, ] = React.useState(false)
   const [withLabels, ] = React.useState(false)
   const [sound, setSound, ] = React.useState(soundProp)
   const [sustain, setSustain, ] = React.useState(false)
@@ -26,6 +53,7 @@ const App = ({
   const [, setMouseNotesOn, ] = React.useState([])
   const [, setVelocity, ] = React.useState(null)
   const timer = React.useRef(null)
+  const scrollRef = React.useRef(null)
 
   const soundRef = React.useRef(null)
   const sustainPedalRef = React.useRef(null)
@@ -38,6 +66,15 @@ const App = ({
       const { current = null, } = keyboardRef
       if (current !== null) {
         current.focus()
+      }
+    })
+  }
+
+  const setInitialScroll = () => {
+    window.setTimeout(() => {
+      const { current = null, } = scrollRef
+      if (current !== null) {
+        current.scrollLeft = (current.scrollWidth / 2) - (current.clientWidth / 2)
       }
     })
   }
@@ -79,42 +116,43 @@ const App = ({
 
   const handleKeyOn = e => {
     const { source, } = e
-    const { id, velocity, } = e.target.value
+    const { note, velocity, } = e.target.value
     if (source === 'mouse') {
       setMouseNotesOn(notes => [
         ...notes,
-        id,
+        note,
       ])
     }
     setNotesOn(notes => [
       ...notes,
-      id,
+      note,
     ])
+
     setVelocity(oldVelocity => {
       const theVelocity = oldVelocity !== null ? oldVelocity : velocity
       generator.soundOn(
-        id,
-        (source === 'mouse' ? theVelocity : velocity) * 0x7f,
-        getKeyFrequency(id, 69, 440),
+        note,
+        ('mouse touch'.split(' ').includes(source) ? theVelocity : velocity) * 0x7f,
+        getKeyFrequency(note, 69, 440),
       )
-      return source === 'mouse' ? theVelocity : oldVelocity
+      return 'mouse touch'.split(' ').includes(source) ? theVelocity : oldVelocity
     })
   }
 
   const handleKeyOff = e => {
     const { source, } = e
-    const { id, } = e.target.value
-    setNotesOn(notes => notes.filter(n => n !== id))
-    if (source === 'mouse') {
+    const { note, } = e.target.value
+    setNotesOn(notes => notes.filter(n => n !== note))
+    if ('mouse touch'.split(' ').includes(source)) {
       window.setTimeout(() => {
         setMouseNotesOn(notes => {
-          const newNotes = notes.filter(n => n !== id)
+          const newNotes = notes.filter(n => n !== note)
           setVelocity(oldVelocity => newNotes.length > 0 ? oldVelocity : null)
           return newNotes
         })
       })
     }
-    generator.soundOff(id)
+    generator.soundOff(note)
   }
 
   React.useEffect(() => {
@@ -142,6 +180,7 @@ const App = ({
 
   React.useEffect(() => {
     keepFocus()
+    setInitialScroll()
   }, [])
 
   React.useEffect(() => {
@@ -349,35 +388,40 @@ const App = ({
           </div>
         )
       }
-      <MusicalKeyboard
-        ref={keyboardRef}
-        labels={key => withLabels ? `${PITCH_NAMES[key.id % 12]}${Math.floor(key.id / 12) - 1}` : null}
-        onKeyOn={handleKeyOn}
-        onKeyOff={handleKeyOff}
-        startKey={startKeyProp}
-        endKey={endKeyProp}
-        accidentalKeyHeight="65%"
-        keyboardMapping={keyboardMapping}
-        orientation={innerWidth < innerHeight ? 'rotate-90' : 'normal'}
+      <KeyboardContainer
+        ref={scrollRef}
         style={{
-          height: innerWidth < innerHeight ? '100%' : '5vw',
-          width: innerWidth < innerHeight ? '5vh' : '100%',
-          color: '#000',
-          outline: 'none',
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
+          overflow: scrollEnabled ? 'auto' : 'hidden',
         }}
-        naturalKeyStyle={pressed => ({
-          backgroundColor: pressed ? 'Highlight' : 'white',
-          border: '1px solid',
-        })}
-        accidentalKeyStyle={pressed => ({
-          backgroundColor: pressed ? 'Highlight' : 'currentColor',
-          border: '1px solid',
-        })}
-        keysOn={notesOn}
-      />
+      >
+        <KeyboardContainerContent>
+          <MusicalKeyboard
+            ref={keyboardRef}
+            labels={key => withLabels ? `${PITCH_NAMES[key.id % 12]}${Math.floor(key.id / 12) - 1}` : null}
+            onKeyOn={handleKeyOn}
+            onKeyOff={handleKeyOff}
+            startKey={startKeyProp}
+            endKey={endKeyProp}
+            accidentalKeyHeight="70%"
+            keyboardMapping={keyboardMapping}
+            orientation={innerWidth < innerHeight ? 'rotate-90' : 'normal'}
+            style={{
+              width: '100%',
+              height: '100%',
+              outline: 'none',
+            }}
+            naturalKeyStyle={pressed => ({
+              backgroundColor: pressed ? 'Highlight' : 'white',
+              border: '1px solid',
+            })}
+            accidentalKeyStyle={pressed => ({
+              backgroundColor: pressed ? 'Highlight' : 'currentColor',
+              border: '1px solid',
+            })}
+            keysOn={notesOn}
+          />
+        </KeyboardContainerContent>
+      </KeyboardContainer>
     </React.Fragment>
   )
 }
