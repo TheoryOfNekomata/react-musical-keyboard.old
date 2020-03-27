@@ -90,9 +90,11 @@ Storybook
             'D# major': 'eFlatMajor',
           },
           'none',
-        )]}
+        )].reduce((k, o) => ({...k, [o]: 127}), {})}
+        octaveDivision={select('Octave division', [12, 24], 12)}
         style={{
-          [keyboardLength[orientation]]: `${number('Keyboard length', 10, { range: true, min: 5, max: 20, })}v${keyboardLength[orientation].charAt(0)}`,
+          backgroundColor: 'white',
+          [keyboardLength[orientation]]: number('Keyboard length', 100, { range: true, min: 5, max: 100, }),
         }}
         labels={labels[select(
           'Label',
@@ -103,7 +105,7 @@ Storybook
             pitch: 'pitch',
             'note name (pitch + octave)': 'noteName',
             'pitch class': 'pitchClass',
-            octave: 'single octave',
+            'single octave': 'octave',
             scale: 'scale',
           },
           'none',
