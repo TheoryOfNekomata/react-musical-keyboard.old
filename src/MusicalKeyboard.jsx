@@ -21,15 +21,19 @@ const OCTAVE_OFFSETS = {
   8: (8 / 12) + (1 / 192),
   8.5: (8 / 12) + (1 / 192),
   9: 5 / 7,
-  9.5: (10 / 12) + (1 / 192),
-  10: (10 / 12) + (1 / 192),
-  10.5: (10 / 12) + (1 / 192),
+  9.5: (10 / 12),
+  10: (10 / 12),
+  10.5: (10 / 12),
   11: 6 / 7,
   11.5: (93 / 96) + (1 / 192),
 }
 
-const REVERSE_OCTAVE_OFFSETS = Array.from(OCTAVE_OFFSETS)
-  .reduce((r, o) => [o, ...r], [])
+const REVERSE_OCTAVE_OFFSETS = Object.entries(OCTAVE_OFFSETS)
+  .reduce(
+    (r, [key, value]) => ({
+      ...r,
+      [11.5 - key]: value,
+    }), {})
 
 //
 //    01    03       06    08    10
@@ -92,11 +96,11 @@ const isAccidental = keyId => [1, 3, 6, 8, 10].includes(keyId % 12)
 
 const calculateTop = ({ accidentalKeyHeight, octaveDivision, }) => keyId => {
   if (isBottomRowAccidental(keyId)) {
-    return accidentalKeyHeight / 3
-  }
-  if (isAccidental(keyId) && octaveDivision === 24) {
     return accidentalKeyHeight * 2 / 3
   }
+  //if (isAccidental(keyId) && octaveDivision === 24) {
+  //  return accidentalKeyHeight * 1 / 3
+ // }
   return 0
 }
 
@@ -104,15 +108,12 @@ const calculateWidth = ({ equalWidths, }) => {
   if (equalWidths) {
     return keyId => {
       const pitchClass = keyId % 12
-      let width
       if ([0, 4, 5, 11].includes(pitchClass)) {
-        width = 1 / 8
+        return 1 / 8
       } else if ([2, 7, 9].includes(pitchClass)) {
-        width = 1 / 6
-      } else {
-        width = 1 / 12
+        return 1 / 6
       }
-      return `${width * 100}%`
+      return 1 / 12
     }
   }
   return keyId => {
@@ -122,7 +123,7 @@ const calculateWidth = ({ equalWidths, }) => {
     } else {
       width = isAccidental(keyId) || isTopRowAccidental(keyId) || isBottomRowAccidental(keyId) ? (1 / 12) : (1 / 7)
     }
-    return `${width * 100}%`
+    return width
   }
 }
 
@@ -136,9 +137,9 @@ const calculateHeight = ({ accidentalKeyHeight, octaveDivision, }) => keyId => {
   if (isMiddleRowAccidental(keyId)) {
     return accidentalKeyHeight * 5 / 6
   }
-  if (octaveDivision === 24 && isAccidental(keyId)) {
-    return accidentalKeyHeight / 3
-  }
+  //if (octaveDivision === 24 && isAccidental(keyId)) {
+  //  return accidentalKeyHeight / 3
+  //}
   if (isAccidental(keyId)) {
     return accidentalKeyHeight
   }
@@ -170,7 +171,7 @@ const calculateAccidentalOpacity = keyId => {
   }
 
   if (isTopRowAccidental(keyId)) {
-    return 1
+    return 0
   }
 
   if (isAccidental(keyId)) {
@@ -261,130 +262,132 @@ const MusicalKeyboard = React.forwardRef(({
     >
       <div
         style={{
-          marginLeft: `-${OCTAVE_OFFSETS[startKey % 12] * 100 / Object.keys(octaves).length}%`,
-          marginRight: `-${REVERSE_OCTAVE_OFFSETS[endKey % 12] * 100 / Object.keys(octaves).length}%`,
           display: 'flex',
           height: '100%',
           backgroundColor: 'inherit',
         }}
       >
         {
-          Object.entries(octaves).map(([octave, octaveKeys, ], i, theOctaves) => (
-            <div
-              key={octave}
-              style={{
-                verticalAlign: 'top',
-                width: `${
-                  1 / theOctaves.length
-                  * 100
-                }%`,
-                height: '100%',
-                backgroundColor: 'inherit',
-                zIndex: theOctaves.length - i,
-              }}
-            >
+          Object.entries(octaves).map(([octave, octaveKeys, ], i, theOctaves) => {
+            let flexBasis
+            let lastKeyOffsetId = (octaveKeys[octaveKeys.length - 1].id) % 12
+            let firstKeyOffsetId = (octaveKeys[0].id % 12)
+            flexBasis = OCTAVE_OFFSETS[lastKeyOffsetId] + calculateWidth({ equalWidths, })(octaveKeys[octaveKeys.length - 1].id)
+            let negative = OCTAVE_OFFSETS[firstKeyOffsetId]
+            flexBasis -= negative
+
+            return (
               <div
+                key={octave}
                 style={{
-                  width: '100%',
+                  width: `${(flexBasis) * 100}%`,
                   height: '100%',
-                  marginLeft: i === 0 ? 'auto' : `-${OCTAVE_OFFSETS[octaveKeys[0].id % 12] * 100}%`,
-                  marginRight: `-${REVERSE_OCTAVE_OFFSETS[(octaveKeys[octaveKeys.length - 1].id) % 12] * 100}%`,
-                  position: 'relative',
                   backgroundColor: 'inherit',
+                  zIndex: theOctaves.length - i,
+                  position: 'relative',
                 }}
               >
                 {
-                  octaveKeys.map(key => (
-                    <div
-                      key={key.id}
-                      style={{
-                        position: 'absolute',
-                        top: calculateTop({ accidentalKeyHeight, octaveDivision, })(key.id),
-                        left: `${OCTAVE_OFFSETS[key.id % 12] * 100}%`,
-                        width: calculateWidth({ equalWidths, })(key.id),
-                        height: calculateHeight({ accidentalKeyHeight, octaveDivision, })(key.id),
-                        zIndex: calculateZIndex(key.id),
-                        backgroundColor: 'inherit',
-                      }}
-                    >
-                      <button
-                        tabIndex={-1}
-                        disabled={disabled}
+                  octaveKeys.map(key => {
+                    let keyWidth = calculateWidth({ equalWidths, })(key.id)
+                    keyWidth *= (1 / (flexBasis))
+
+                    let keyOffset = OCTAVE_OFFSETS[key.id % 12]
+                    keyOffset -= negative
+                    keyOffset *= (1 / flexBasis)
+
+                    return (
+                      <div
+                        key={key.id}
                         style={{
-                          border: 0,
-                          background: 'transparent',
-                          font: 'inherit',
-                          padding: 0,
-                          appearance: 'none',
-                          WebkitAppearance: 'none',
-                          MozAppearance: 'none',
-                          position: 'relative',
-                          width: '100%',
-                          height: '100%',
-                          outline: 0,
+                          position: 'absolute',
+                          top: calculateTop({ accidentalKeyHeight, octaveDivision, })(key.id),
+                          left: `${keyOffset * 100}%`,
+                          width: `${keyWidth * 100}%`,
+                          height: calculateHeight({ accidentalKeyHeight, octaveDivision, })(key.id),
+                          zIndex: calculateZIndex(key.id),
                           backgroundColor: 'inherit',
                         }}
                       >
-                        <span
+                        <button
+                          tabIndex={-1}
+                          disabled={disabled}
                           style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
+                            border: 0,
+                            background: 'transparent',
+                            font: 'inherit',
+                            padding: 0,
+                            appearance: 'none',
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'none',
+                            position: 'relative',
                             width: '100%',
                             height: '100%',
-                            border: '1px solid',
-                            boxSizing: 'border-box',
+                            outline: 0,
                             backgroundColor: 'inherit',
                           }}
                         >
                           <span
                             style={{
-                              display: 'block',
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
                               width: '100%',
                               height: '100%',
-                              backgroundColor: (
-                                typeof key.velocity === 'number'
-                                  ? 'Highlight'
-                                  : calculateKeyColor(key.id)
-                              ),
-                              opacity: calculateAccidentalOpacity(key.id)
-                            }}
-                          />
-                        </span>
-                        <span
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            filter: isAccidental(key.id) ? 'invert(1)' : null,
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'flex-end',
-                            boxSizing: 'border-box',
-                            paddingBottom: '0.5rem',
-                          }}
-                        >
-                          <span
-                            style={{
-                              transform: 'rotate(-90deg)',
+                              border: '1px solid',
+                              boxSizing: 'border-box',
+                              backgroundColor: 'inherit',
                             }}
                           >
-                            {
-                              typeof labels === 'function'
-                                ? labels(key)
-                                : null
-                            }
+                            <span
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                height: '100%',
+                                backgroundColor: (
+                                  typeof key.velocity === 'number'
+                                    ? 'Highlight'
+                                    : calculateKeyColor(key.id)
+                                ),
+                                opacity: calculateAccidentalOpacity(key.id)
+                              }}
+                            />
                           </span>
-                        </span>
-                      </button>
-                    </div>
-                  ))
+                          <span
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              filter: isAccidental(key.id) ? 'invert(1)' : null,
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'flex-end',
+                              boxSizing: 'border-box',
+                              paddingBottom: '0.5rem',
+                            }}
+                          >
+                            <span
+                              style={{
+                                transform: 'rotate(-90deg)',
+                              }}
+                            >
+                              {
+                                typeof labels === 'function'
+                                  ? labels(key)
+                                  : null
+                              }
+                            </span>
+                          </span>
+                        </button>
+                      </div>
+                    )
+                  })
                 }
               </div>
-            </div>
-          ))
+            )
+          })
         }
       </div>
     </div>

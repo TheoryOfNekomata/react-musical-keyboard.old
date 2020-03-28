@@ -67,6 +67,9 @@ Storybook
       'normal'
     )
 
+    // const startKey = number('Start key', 48)
+    // const endKey = number('End key', 71)
+
     return (
       <MusicalKeyboard
         startKey={startKey}
