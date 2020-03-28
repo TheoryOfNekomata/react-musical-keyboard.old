@@ -2,17 +2,17 @@ import * as React from 'react'
 import * as PropTypes from 'prop-types'
 
 const OCTAVE_OFFSETS = {
-  0: 0, // C
-  0.5: (1 / 12) + (1 / 384), // C half sharp
-  1: (1 / 12) + (1 / 384), // C sharp
-  1.5: (1 / 12) + (1 / 384), // D half flat
-  2: 1 / 7, // D
-  2.5: (3 / 12) + (1 / 96), // D half sharp
-  3: (3 / 12) + (1 / 96), // D sharp
-  3.5: (3 / 12) + (1 / 96), // E half flat
-  4: 2 / 7, // E
-  4.5: (37 / 96) + (1 / 96), // E half sharp
-  5: 3 / 7, // F
+  0: 0,
+  0.5: (1 / 12) + (1 / 384),
+  1: (1 / 12) + (1 / 384),
+  1.5: (1 / 12) + (1 / 384),
+  2: 1 / 7,
+  2.5: (3 / 12) + (1 / 96),
+  3: (3 / 12) + (1 / 96),
+  3.5: (3 / 12) + (1 / 96),
+  4: 2 / 7,
+  4.5: (37 / 96) + (1 / 96),
+  5: 3 / 7,
   5.5: (6 / 12) + (1 / 96),
   6: (6 / 12) + (1 / 96),
   6.5: (6 / 12) + (1 / 96),
@@ -28,18 +28,32 @@ const OCTAVE_OFFSETS = {
   11.5: (93 / 96) + (1 / 192),
 }
 
-const REVERSE_OCTAVE_OFFSETS = Object.entries(OCTAVE_OFFSETS)
-  .reduce(
-    (r, [key, value]) => ({
-      ...r,
-      [11.5 - key]: value,
-    }), {})
-
-//
-//    01    03       06    08    10
-//
-// 00    02    04 05    07    09    11
-//
+const EQUAL_OCTAVE_OFFSETS = {
+  0: 0,
+  0.5: 1 / 12,
+  1: 1 / 12,
+  1.5: 1 / 12,
+  2: 3 / 24,
+  2.5: 3 / 12,
+  3: 3 / 12,
+  3.5: 3 / 12,
+  4: 7 / 24,
+  4.5: 4.5 / 12,
+  5: 5 / 12,
+  5.5: 6 / 12,
+  6: 6 / 12,
+  6.5: 6 / 12,
+  7: 13 / 24,
+  7.5: 8 / 12,
+  8: 8 / 12,
+  8.5: 8 / 12,
+  9: 17 / 24,
+  9.5: 10 / 12,
+  10: 10 / 12,
+  10.5: 10 / 12,
+  11: 21 / 24,
+  11.5: 11.5 / 12,
+}
 
 const isTopRowAccidental = keyId => {
   const ranges = [
@@ -94,13 +108,21 @@ const isMiddleRowAccidental = keyId => {
 
 const isAccidental = keyId => [1, 3, 6, 8, 10].includes(keyId % 12)
 
-const calculateTop = ({ accidentalKeyHeight, octaveDivision, }) => keyId => {
-  if (isBottomRowAccidental(keyId)) {
-    return accidentalKeyHeight * 2 / 3
+const breakdownCssNumber = n => {
+  const magnitude = parseInt(n)
+  const magnitudeStr = String(magnitude)
+  const unit = String(n).slice(magnitudeStr.length)
+  return {
+    magnitude,
+    unit,
   }
-  //if (isAccidental(keyId) && octaveDivision === 24) {
-  //  return accidentalKeyHeight * 1 / 3
- // }
+}
+
+const calculateTop = ({ accidentalKeyHeight, }) => keyId => {
+  const { unit, magnitude, } = breakdownCssNumber(accidentalKeyHeight)
+  if (isBottomRowAccidental(keyId)) {
+    return `${magnitude * 2 / 3}${unit}`
+  }
   return 0
 }
 
@@ -127,21 +149,19 @@ const calculateWidth = ({ equalWidths, }) => {
   }
 }
 
-const calculateHeight = ({ accidentalKeyHeight, octaveDivision, }) => keyId => {
+const calculateHeight = ({ accidentalKeyHeight, }) => keyId => {
+  const { unit, magnitude, } = breakdownCssNumber(accidentalKeyHeight)
   if (isTopRowAccidental(keyId)) {
-    return accidentalKeyHeight / 3
+    return `${magnitude / 3}${unit}`
   }
   if (isBottomRowAccidental(keyId)) {
-    return accidentalKeyHeight / 3
+    return `${magnitude / 3}${unit}`
   }
   if (isMiddleRowAccidental(keyId)) {
-    return accidentalKeyHeight * 5 / 6
+    return `${magnitude * 5 / 6}${unit}`
   }
-  //if (octaveDivision === 24 && isAccidental(keyId)) {
-  //  return accidentalKeyHeight / 3
-  //}
   if (isAccidental(keyId)) {
-    return accidentalKeyHeight
+    return `${magnitude}${unit}`
   }
   return '100%'
 }
@@ -165,36 +185,17 @@ const createKeysState = (startKeyId, endKeyId, octaveDivision) => (
     }))
 )
 
-const calculateAccidentalOpacity = keyId => {
-  if (isMiddleRowAccidental(keyId)) {
-    return 1
+const defaultKeyStyles = key => {
+  if (typeof key.velocity === 'number') {
+    return {
+      backgroundColor: 'Highlight',
+      border: '1px solid',
+    }
   }
-
-  if (isTopRowAccidental(keyId)) {
-    return 0
+  return {
+    backgroundColor: isAccidental(key.id) ? 'currentColor' : 'inherit',
+    border: '1px solid',
   }
-
-  if (isAccidental(keyId)) {
-    return 1
-  }
-
-  if (isBottomRowAccidental(keyId)) {
-    return 0
-  }
-
-  return 1
-}
-
-const calculateKeyColor = keyId => {
-  if (
-    isAccidental(keyId)
-    || isTopRowAccidental(keyId)
-    || isMiddleRowAccidental(keyId)
-    || isBottomRowAccidental(keyId)
-  ) {
-    return 'currentColor'
-  }
-  return 'inherit'
 }
 
 /**
@@ -205,7 +206,12 @@ const MusicalKeyboard = React.forwardRef(({
   startKey = 9,
   endKey = 96,
   equalWidths = false,
-  style = {},
+  style: {
+    main = {},
+    key: keyStyles = defaultKeyStyles,
+  } = {
+    key: defaultKeyStyles,
+  },
   onKeyOn = null,
   onKeyOff = null,
   labels = () => null,
@@ -255,9 +261,10 @@ const MusicalKeyboard = React.forwardRef(({
       {...props}
       tabIndex={0}
       style={{
-        ...style,
+        ...main,
         position: 'relative',
         overflow: 'hidden',
+        lineHeight: 1,
       }}
     >
       <div
@@ -269,11 +276,12 @@ const MusicalKeyboard = React.forwardRef(({
       >
         {
           Object.entries(octaves).map(([octave, octaveKeys, ], i, theOctaves) => {
+            const theOctaveOffsets = equalWidths ? EQUAL_OCTAVE_OFFSETS : OCTAVE_OFFSETS
             let flexBasis
             let lastKeyOffsetId = (octaveKeys[octaveKeys.length - 1].id) % 12
             let firstKeyOffsetId = (octaveKeys[0].id % 12)
-            flexBasis = OCTAVE_OFFSETS[lastKeyOffsetId] + calculateWidth({ equalWidths, })(octaveKeys[octaveKeys.length - 1].id)
-            let negative = OCTAVE_OFFSETS[firstKeyOffsetId]
+            flexBasis = Math.min(theOctaveOffsets[lastKeyOffsetId] + calculateWidth({ equalWidths, })(octaveKeys[octaveKeys.length - 1].id), 1)
+            let negative = theOctaveOffsets[firstKeyOffsetId]
             flexBasis -= negative
 
             return (
@@ -292,7 +300,7 @@ const MusicalKeyboard = React.forwardRef(({
                     let keyWidth = calculateWidth({ equalWidths, })(key.id)
                     keyWidth *= (1 / (flexBasis))
 
-                    let keyOffset = OCTAVE_OFFSETS[key.id % 12]
+                    let keyOffset = theOctaveOffsets[key.id % 12]
                     keyOffset -= negative
                     keyOffset *= (1 / flexBasis)
 
@@ -325,6 +333,7 @@ const MusicalKeyboard = React.forwardRef(({
                             height: '100%',
                             outline: 0,
                             backgroundColor: 'inherit',
+                            color: 'inherit',
                           }}
                         >
                           <span
@@ -334,22 +343,17 @@ const MusicalKeyboard = React.forwardRef(({
                               left: 0,
                               width: '100%',
                               height: '100%',
-                              border: '1px solid',
                               boxSizing: 'border-box',
                               backgroundColor: 'inherit',
                             }}
                           >
                             <span
                               style={{
+                                ...keyStyles(key),
                                 display: 'block',
                                 width: '100%',
                                 height: '100%',
-                                backgroundColor: (
-                                  typeof key.velocity === 'number'
-                                    ? 'Highlight'
-                                    : calculateKeyColor(key.id)
-                                ),
-                                opacity: calculateAccidentalOpacity(key.id)
+                                boxSizing: 'border-box',
                               }}
                             />
                           </span>
@@ -402,7 +406,10 @@ MusicalKeyboard.propTypes = {
   /** The ending key number of the keyboard. */
   endKey: PropTypes.number,
   /** The outer style of the keyboard. */
-  style: PropTypes.object,
+  style: PropTypes.shape({
+    main: PropTypes.object,
+    key: PropTypes.object,
+  }),
   /** Event handler that triggers when a key is activated. */
   onKeyOn: PropTypes.func,
   /** Event handler that triggers when a key is deactivated. */
@@ -415,14 +422,16 @@ MusicalKeyboard.propTypes = {
   accidentalKeyHeight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   /** The velocity of the key when the keyboard is used to activate the key. */
   keyboardVelocity: PropTypes.number,
-  /** The style of the natural keys. */
-  naturalKeyStyle: PropTypes.func,
-  /** The style of the accidental (flat/sharp) keys. */
-  accidentalKeyStyle: PropTypes.func,
+  /** How many notes should encompass a single octave? */
+  octaveDivision: PropTypes.oneOf([12, 24, ]),
+  /** Does any key occupy the same width? */
+  equalWidths: PropTypes.bool,
   /** The orientation of the keyboard. */
   orientation: PropTypes.oneOf(['normal', 'rotate-90', 'rotate-180', 'rotate-270']),
   /** The array of activated keys via their key numbers. */
   keysOn: PropTypes.arrayOf(PropTypes.number),
+  /** Is the component active? */
+  disabled: PropTypes.bool,
 }
 
 export default MusicalKeyboard

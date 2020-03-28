@@ -1,6 +1,6 @@
 import * as React from 'react'
 import * as Storybook from '@storybook/react'
-import { number, select, } from '@storybook/addon-knobs'
+import { boolean, number, select, } from '@storybook/addon-knobs'
 
 import MusicalKeyboard from './MusicalKeyboard.jsx'
 
@@ -74,16 +74,9 @@ Storybook
       <MusicalKeyboard
         startKey={startKey}
         endKey={endKey}
-        accidentalKeyHeight={number('Accidental key height', 65, { range: true, min: 1, max: 100, })}
+        equalWidths={boolean('Equal width', false)}
+        accidentalKeyHeight={number('Accidental key height', 65, { range: true, min: 1, max: 100, }) + '%'}
         orientation={orientation}
-        naturalKeyStyle={pressed => ({
-          backgroundColor: pressed ? 'Highlight' : 'white',
-          border: '1px solid',
-        })}
-        accidentalKeyStyle={pressed => ({
-          backgroundColor: pressed ? 'Highlight' : 'currentColor',
-          border: '1px solid',
-        })}
         keysOn={keysOn[select(
           'Active Keys',
           {
@@ -96,8 +89,10 @@ Storybook
         )].reduce((k, o) => ({...k, [o]: 127}), {})}
         octaveDivision={select('Octave division', [12, 24], 12)}
         style={{
-          backgroundColor: 'white',
-          [keyboardLength[orientation]]: number('Keyboard length', 100, { range: true, min: 5, max: 100, }),
+          main: {
+            backgroundColor: 'white',
+            [keyboardLength[orientation]]: number('Keyboard length', 100, { range: true, min: 5, max: 200, }),
+          },
         }}
         labels={labels[select(
           'Label',
