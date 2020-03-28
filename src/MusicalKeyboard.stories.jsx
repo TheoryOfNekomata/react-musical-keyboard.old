@@ -40,32 +40,15 @@ const ranges = {
   fullMidi: [0, 127],
 }
 
-const keyboardLength = {
-  normal: 'height',
-  'rotate-180': 'height',
-  'rotate-90': 'width',
-  'rotate-270': 'width',
-}
-
 Storybook
   .storiesOf('React Musical Keyboard', module)
   .add('MusicalKeyboard', () => {
-    const [startKey, endKey, ] = ranges[select(
+    const range = select(
       'Range',
       Object.keys(ranges),
       'twoOctaves',
-    )]
-
-    const orientation = select(
-      'Orientation',
-      [
-        'normal',
-        'rotate-90',
-        'rotate-180',
-        'rotate-270'
-      ],
-      'normal'
     )
+    const [startKey, endKey, ] = ranges[range]
 
     // const startKey = number('Start key', 48)
     // const endKey = number('End key', 71)
@@ -76,7 +59,6 @@ Storybook
         endKey={endKey}
         equalWidths={boolean('Equal width', false)}
         accidentalKeyHeight={number('Accidental key height', 65, { range: true, min: 1, max: 100, }) + '%'}
-        orientation={orientation}
         keysOn={keysOn[select(
           'Active Keys',
           {
@@ -91,7 +73,7 @@ Storybook
         style={{
           main: {
             backgroundColor: 'white',
-            [keyboardLength[orientation]]: number('Keyboard length', 100, { range: true, min: 5, max: 200, }),
+            height: number('Keyboard length', 100, { range: true, min: 5, max: 200, }),
           },
         }}
         labels={labels[select(
