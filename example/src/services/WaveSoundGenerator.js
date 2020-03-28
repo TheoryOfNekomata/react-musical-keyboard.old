@@ -1,5 +1,6 @@
+import getKeyFrequency from './getKeyFrequency'
 
-export default function WaveSoundGenerator() {
+export default (baseFrequency = 440) => function WaveSoundGenerator() {
   const oscillators = {}
   const AudioContext = window.AudioContext || window.webkitAudioContext
   const audioCtx = new AudioContext()
@@ -11,7 +12,7 @@ export default function WaveSoundGenerator() {
     sound = soundId
   }
 
-  this.soundOn = (id, volume, frequency) => {
+  this.soundOn = (id, volume) => {
     if (oscillators[id]) {
       oscillators[id].stop()
       delete oscillators[id]
@@ -25,13 +26,15 @@ export default function WaveSoundGenerator() {
     gainNode.connect(audioCtx.destination)
     gainNode.gain.value = volume * 0.001
 
-    oscillators[id].frequency.value = frequency
+    oscillators[id].frequency.value = getKeyFrequency(id, 69, baseFrequency)
     oscillators[id].start()
   }
 
   this.soundOff = id => {
     if (oscillators[id]) {
-      oscillators[id].stop()
+      try {
+        oscillators[id].stop()
+      } catch (err) {}
       delete oscillators[id]
     }
   }

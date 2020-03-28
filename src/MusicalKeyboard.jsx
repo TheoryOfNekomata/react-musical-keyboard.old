@@ -51,16 +51,16 @@ const MusicalKeyboard = React.forwardRef(({
   const [keysState, setKeysState, ] = React.useState(
     createKeysState(startKey, endKey, octaveDivision)
   )
+  const [k, setKeysOn, ] = React.useState([])
   const keyboardRef = React.useRef(ref ? ref.current : null)
 
-  const triggerKeyOn = source => (key, velocity) => {
-    const { current = null, } = keyboardRef
-    if (onKeyOn && current !== null) {
+  const triggerKeyOn = source => (id, velocity) => {
+    console.log(source, 'on')
+    if (onKeyOn) {
       onKeyOn({
         target: {
-          ...current,
           value: {
-            ...key,
+            id,
             velocity,
           },
         },
@@ -69,35 +69,188 @@ const MusicalKeyboard = React.forwardRef(({
     }
   }
 
-  const triggerKeyOff = source => key => {
-    const { current = null, } = keyboardRef
-    if (onKeyOff && current !== null) {
+  const triggerKeyOff = source => id => {
+    console.log(source, 'off')
+    if (onKeyOff) {
       onKeyOff({
         target: {
-          ...current,
-          value: key,
+          value: {
+            id,
+          },
         },
         source,
       })
     }
   }
 
-  const handleMouseDown = key => e => {
-    const { buttons, clientY, target, } = e
-    const { offsetHeight, } = target
+  const getKeyAndVelocity = e => {
+    const { clientY, clientX, } = e
     const { current, } = keyboardRef
-    const { top, } = current.getBoundingClientRect()
-    const offsetY = clientY - top
-    if (buttons === 1) {
-      e.preventDefault()
-      current.focus()
-      triggerKeyOn('mouse')(key, offsetY / offsetHeight)
+    const octaves = Array
+      .from(current.children).slice(0, -1)
+      .sort((a, b) => b.style.zIndex - a.style.zIndex)
+    const theOctave = octaves.find(o => {
+      const { top, right, bottom, left, } = o.getBoundingClientRect()
+
+      return (
+        left <= clientX
+        && clientX <= right
+        && top <= clientY
+        && clientY <= bottom
+      )
+    })
+
+    if (theOctave) {
+      const keys = Array
+        .from(theOctave.children)
+        .sort((a, b) => b.style.zIndex - a.style.zIndex)
+      const theKey = keys.find(k => {
+        const { top, right, bottom, left, } = k.getBoundingClientRect()
+
+        return (
+          left <= clientX
+          && clientX <= right
+          && top <= clientY
+          && clientY <= bottom
+        )
+      })
+      const { offsetHeight, } = theKey
+      const { top, } = current.getBoundingClientRect()
+      const offsetY = clientY - top
+      return {
+        id: Number(theKey.dataset.keyId),
+        velocity: offsetY / offsetHeight
+      }
+    }
+
+    return null
+  }
+
+  const handleMouseDown = e => {
+    if (e.buttons === 1) {
+      const keyAndVelocity = getKeyAndVelocity(e)
+      if (keyAndVelocity !== null) {
+        setKeysOn(oldKeysOn => {
+          const { velocity, id } = keyAndVelocity
+          triggerKeyOn('mouse')(id, velocity)
+          return [
+            ...oldKeysOn,
+            id,
+          ]
+        })
+      }
     }
   }
 
-  const handleMouseUp = key => e => {
-    triggerKeyOff(key)
+  const handleMouseUp = e => {
+    const keyAndVelocity = getKeyAndVelocity(e)
+    if (keyAndVelocity !== null) {
+      setKeysOn(oldKeysOn => {
+        const { id } = keyAndVelocity
+        triggerKeyOff('mouse')(id)
+        return oldKeysOn.filter(k => k !== id)
+      })
+    }
   }
+
+  const handleMouseMove = e => {
+    if (e.buttons === 1) {
+      const keyAndVelocity = getKeyAndVelocity(e)
+      setKeysOn(oldKeysOn => {
+        const removedKeys = keyAndVelocity !== null ? oldKeysOn.filter(k => k !== keyAndVelocity.id) : oldKeysOn
+        const retainedKeys = keyAndVelocity !== null ? [keyAndVelocity.id] : []
+
+        removedKeys.forEach(k => {
+          triggerKeyOff('mouse')(k)
+        })
+
+        if (keyAndVelocity !== null) {
+          if (!oldKeysOn.includes(keyAndVelocity.id)) {
+            triggerKeyOn('mouse')(keyAndVelocity.id, keyAndVelocity.velocity)
+          }
+        }
+
+        return retainedKeys
+      })
+    }
+  }
+
+  const handleTouchStart = e => {
+    const { targetTouches, } = e
+    Array.from(targetTouches).forEach(t => {
+      const keyAndVelocity = getKeyAndVelocity(t)
+      if (keyAndVelocity !== null) {
+        const { velocity, id } = keyAndVelocity
+        triggerKeyOn('touch')(id, velocity)
+      }
+    })
+  }
+
+  const handleTouchMove = e => {
+    const { targetTouches, } = e
+    Array.from(targetTouches).forEach(t => {
+      const keyAndVelocity = getKeyAndVelocity(t)
+      setKeysOn(oldKeysOn => {
+        const removedKeys = keyAndVelocity !== null ? oldKeysOn.filter(k => k !== keyAndVelocity.id) : oldKeysOn
+        const retainedKeys = keyAndVelocity !== null ? [keyAndVelocity.id] : []
+
+        removedKeys.forEach(k => {
+          triggerKeyOff('touch')(k)
+        })
+
+        if (keyAndVelocity !== null) {
+          if (!oldKeysOn.includes(keyAndVelocity.id)) {
+            triggerKeyOn('touch')(keyAndVelocity.id, keyAndVelocity.velocity)
+          }
+        }
+
+        return retainedKeys
+      })
+    })
+  }
+
+  const handleTouchEnd = e => {
+    const { changedTouches, } = e
+    Array.from(changedTouches).forEach(t => {
+      const keyAndVelocity = getKeyAndVelocity(t)
+      if (keyAndVelocity !== null) {
+        const { id } = keyAndVelocity
+        triggerKeyOff('touch')(id)
+      }
+    })
+  }
+
+  React.useEffect(() => {
+    const handleKeyDown = e => {
+      if (window.document.activeElement !== keyboardRef.current) {
+        return
+      }
+      const { keyCode, } = e
+      const { [keyCode]: id = null, } = keyboardMapping
+      if (typeof id === 'number') {
+        triggerKeyOn('keyboard')({ id, }, 0.75)
+      }
+    }
+
+    const handleKeyUp = e => {
+      if (window.document.activeElement !== keyboardRef.current) {
+        return
+      }
+      const { keyCode, } = e
+      const { [keyCode]: id = null, } = keyboardMapping
+      if (typeof id === 'number') {
+        triggerKeyOff('keyboard')({ id, })
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown, { capture: true, })
+    window.addEventListener('keyup', handleKeyUp, { capture: true, })
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, { capture: true, })
+      window.removeEventListener('keyup', handleKeyUp, { capture: true, })
+    }
+  }, [])
 
   React.useEffect(() => {
     setKeysState(createKeysState(startKey, endKey, octaveDivision))
@@ -125,6 +278,8 @@ const MusicalKeyboard = React.forwardRef(({
     {},
   )
 
+  const theOctaves = Object.entries(octaves)
+
   return (
     <div
       {...props}
@@ -139,7 +294,7 @@ const MusicalKeyboard = React.forwardRef(({
       ref={keyboardRef}
     >
       {
-        Object.entries(octaves).map(([octave, octaveKeys, ], i, theOctaves) => {
+        theOctaves.map(([octave, octaveKeys, ], i, theOctaves) => {
           const theOctaveOffsets = equalWidths ? EQUAL_OCTAVE_OFFSETS : OCTAVE_OFFSETS
           let flexBasis
           let lastKeyOffsetId = (octaveKeys[octaveKeys.length - 1].id) % 12
@@ -171,9 +326,9 @@ const MusicalKeyboard = React.forwardRef(({
                   return (
                     <button
                       key={key.id}
+                      data-key-id={key.id}
                       tabIndex={-1}
                       disabled={disabled}
-                      onMouseDown={handleMouseDown(key)}
                       style={{
                         position: 'absolute',
                         top: calculateTop({ accidentalKeyHeight, octaveDivision, })(key.id),
@@ -240,6 +395,22 @@ const MusicalKeyboard = React.forwardRef(({
           )
         })
       }
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: theOctaves.length + 1,
+        }}
+        onMouseMove={handleMouseMove}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      />
     </div>
   )
 })

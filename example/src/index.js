@@ -51,7 +51,7 @@ Promise.all([
   import('./services/WaveSoundGenerator')
 ])
   .then(([midiModule, waveModule, ]) => {
-    let Generator = waveModule.default
+    let Generator = waveModule.default(440)
     if ('requestMIDIAccess' in window.navigator) {
       Generator = midiModule.default
     }

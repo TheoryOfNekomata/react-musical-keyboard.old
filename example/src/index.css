@@ -15,5 +15,71 @@ body {
 }
 
 #root {
-  display: contents;
+  height: 100%;
+  display: grid;
+  grid-template-areas:
+    'instrument instrument'
+    '.          pedals'
+    'keyboard   keyboard';
+  grid-template-columns: auto min-content;
+  grid-template-rows: min-content auto 150px;
+}
+
+.keyboard {
+  grid-area: keyboard;
+  background-color: white;
+  color: black;
+  position: relative;
+  overflow: hidden;
+}
+
+.keyboard > * {
+  position: absolute;
+  width: 700%;
+  height: 100%;
+}
+
+.instrument {
+  grid-area: instrument;
+}
+
+.instrument > select {
+  width: 100%;
+  height: 2rem;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.pedals {
+  grid-area: pedals;
+  white-space: nowrap;
+  padding: 1rem 0;
+}
+
+.pedals > button {
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0 0.5rem;
+  outline: 0;
+}
+
+@media (min-width: 720px) {
+  #root {
+    grid-template-areas:
+      '.       .          .          .'
+      '.       instrument instrument instrument'
+      'sliders keyboard   keyboard   keyboard'
+      '.       .          pedals     .';
+    grid-template-rows: auto min-content 100px min-content;
+    grid-template-columns: 100px auto min-content auto;
+  }
+
+  .keyboard > * {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
 }
