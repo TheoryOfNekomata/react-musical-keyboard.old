@@ -18,17 +18,46 @@ body {
   height: 100%;
   display: grid;
   grid-template-areas:
-    'instrument instrument'
-    '.          pedals'
-    'keyboard   keyboard';
-  grid-template-columns: auto min-content;
-  grid-template-rows: min-content auto 150px;
+    'channel  instrument'
+    '.        .'
+    '.        pedals'
+    'keyboard keyboard';
+  grid-template-columns: 100px auto;
+  grid-template-rows: min-content auto min-content 150px;
+}
+
+@media (min-width: 720px) {
+  #root {
+    grid-template-areas:
+      '.       .        .'
+      '.       channel  instrument'
+      'sliders keyboard keyboard'
+      '.       pedals   pedals';
+    grid-template-rows: auto min-content 100px min-content;
+    grid-template-columns: 100px 100px auto;
+  }
+}
+
+.channel {
+  grid-area: channel;
+}
+
+.channel > input {
+  width: 100%;
+  height: 2rem;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
 }
 
 .keyboard {
   grid-area: keyboard;
-  background-color: white;
-  color: black;
   position: relative;
   overflow: hidden;
 }
@@ -38,6 +67,15 @@ body {
   width: 700%;
   height: 100%;
 }
+
+@media (min-width: 720px) {
+  .keyboard > * {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+}
+
 
 .instrument {
   grid-area: instrument;
@@ -49,12 +87,17 @@ body {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
 }
 
 .pedals {
   grid-area: pedals;
   white-space: nowrap;
   padding: 1rem 0;
+  text-align: center;
 }
 
 .pedals > button {
@@ -62,24 +105,16 @@ body {
   background: transparent;
   border: 0;
   padding: 0;
-  margin: 0 0.5rem;
+  margin: 0 1rem;
   outline: 0;
+  line-height: 0;
+  font-size: 4rem;
 }
 
 @media (min-width: 720px) {
-  #root {
-    grid-template-areas:
-      '.       .          .          .'
-      '.       instrument instrument instrument'
-      'sliders keyboard   keyboard   keyboard'
-      '.       .          pedals     .';
-    grid-template-rows: auto min-content 100px min-content;
-    grid-template-columns: 100px auto min-content auto;
-  }
-
-  .keyboard > * {
-    position: absolute;
-    width: 100%;
-    height: 100%;
+  .pedals > button {
+    font-size: 2rem;
+    margin: 0 0.25rem;
+    width: auto;
   }
 }

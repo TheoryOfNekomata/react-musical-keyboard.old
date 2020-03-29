@@ -2,41 +2,49 @@ import * as React from 'react'
 //import * as PropTypes from 'prop-types'
 import MusicalKeyboard from 'react-musical-keyboard'
 
+const defaultInstruments = new Array(16).fill(0)
+
+const handleChannelChange = ({ setActiveChannel, ref, }) => e => {
+  const { value, } = e.target
+  const { current, } = ref
+  setActiveChannel(Number(value))
+  current.focus()
+}
+
+const handleInstrumentChange = ({ generator, channel: activeChannel, setInstruments, ref, }) => e => {
+  const { value, } = e.target
+  const { current, } = ref
+  const instrumentId = Number(value)
+  generator.changeSound(activeChannel)(instrumentId)
+  setInstruments(inst => inst.map((i, channel) => channel === activeChannel ? instrumentId : i))
+  current.focus()
+}
+
+const handleKeyOn = ({ setKeysOn, generator, activeChannel, }) => ({ id, velocity, channel, source, }) => {
+  setKeysOn(oldKeysOn => [
+    ...oldKeysOn,
+    [channel, id, velocity],
+  ])
+  generator.soundOn(activeChannel)(id, velocity * 0x7f)
+}
+
+const handleKeyOff = ({ setKeysOn, generator, activeChannel, }) => ({ id, velocity, channel, source, }) => {
+  setKeysOn(oldKeysOn => oldKeysOn.filter(([c, i, ]) => c !== channel && i !== id))
+  generator.soundOff(activeChannel)(id, velocity * 0x7f)
+}
+
 const App = ({
   startKey,
   endKey,
   keyboardMapping,
   generator,
 }) => {
-  const [keysOn, setKeysOn, ] = React.useState({})
+  const [keysOn, setKeysOn, ] = React.useState([])
+  const [activeChannel, setActiveChannel, ] = React.useState(0)
+  const [instruments, setInstruments, ] = React.useState(defaultInstruments)
+  const [sounds, setSounds, ] = React.useState([])
   const keyboardRef = React.useRef(null)
-  const sounds = generator.getSounds()
-
-  const handleKeyOn = e => {
-    const { value, } = e.target
-
-    const { id, velocity, } = value
-    setKeysOn(oldKeysOn => ({
-      ...oldKeysOn,
-      [id]: velocity,
-    }))
-    generator.soundOn(id, velocity * 0x7f)
-  }
-
-  const handleKeyOff = e => {
-    const { value, } = e.target
-    const { id, velocity, } = value
-    setKeysOn(oldKeysOn => ({
-      ...oldKeysOn,
-      [id]: null,
-    }))
-    generator.soundOff(id, velocity * 0x7f)
-  }
-
-  const handleChange = e => {
-    const { value, } = e.target
-    generator.changeSound(Number(value))
-  }
+  const ref = React.useRef(null)
 
   React.useEffect(() => {
     const tryLock = async () => {
@@ -60,6 +68,10 @@ const App = ({
     }
   }, [])
 
+  React.useEffect(() => {
+    setSounds(generator.getSounds())
+  }, [generator, ])
+
   return (
     <React.Fragment>
       <div
@@ -68,12 +80,15 @@ const App = ({
       >
         <div>
           <MusicalKeyboard
+            ref={ref}
+            playable
             keyboardMapping={keyboardMapping}
             startKey={startKey}
             endKey={endKey}
             keysOn={keysOn}
-            onKeyOn={handleKeyOn}
-            onKeyOff={handleKeyOff}
+            onKeyOn={handleKeyOn({ setKeysOn, generator, activeChannel, })}
+            onKeyOff={handleKeyOff({ setKeysOn, generator, activeChannel, })}
+            activeChannel={activeChannel}
             style={{
               main: {
                 position: 'absolute',
@@ -88,10 +103,23 @@ const App = ({
         </div>
       </div>
       <div
+        className="channel"
+      >
+        <input
+          name="channel"
+          onChange={handleChannelChange({ setActiveChannel, ref, })}
+          type="number"
+          min={0}
+          max={16}
+          value={activeChannel}
+        />
+      </div>
+      <div
         className="instrument"
       >
         <select
-          onChange={handleChange}
+          onChange={handleInstrumentChange({ generator, channel: activeChannel, setInstruments, ref, })}
+          value={instruments[activeChannel]}
         >
           {
             sounds.map((s, i) => (
@@ -113,7 +141,9 @@ const App = ({
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            height="32"
+            style={{
+              height: '1em',
+            }}
             viewBox="0 0 176 256"
           >
             <path
@@ -138,7 +168,9 @@ const App = ({
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            height="32"
+            style={{
+              height: '1em',
+            }}
             viewBox="0 0 128 261"
           >
             <path
@@ -163,7 +195,9 @@ const App = ({
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            height="32"
+            style={{
+              height: '1em',
+            }}
             viewBox="0 0 128 261"
           >
             <path
@@ -188,7 +222,9 @@ const App = ({
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            height="32"
+            style={{
+              height: '1em',
+            }}
             viewBox="0 0 128 261"
           >
             <path
@@ -213,9 +249,9 @@ const App = ({
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            height="32"
             viewBox="0 0 176 256"
             style={{
+              height: '1em',
               transform: 'scaleX(-1)',
             }}
           >

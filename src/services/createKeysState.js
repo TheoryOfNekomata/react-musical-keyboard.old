@@ -1,8 +1,17 @@
-export default (startKeyId, endKeyId, octaveDivision) => (
-  new Array(((endKeyId - startKeyId) * (octaveDivision / 12)) + 1)
-    .fill({ velocity: null, })
-    .map((k, i) => ({
-      ...k,
-      id: startKeyId + (i / (octaveDivision / 12)),
-    }))
-)
+export default (startKeyId, endKeyId, octaveDivision) => {
+  const keysState = []
+
+  let i = 0
+  let j = startKeyId
+  for (; j <= endKeyId;) {
+    keysState.push({
+      id: j.toString(),
+      velocity: null,
+      channel: null,
+    })
+    i += 1
+    j = startKeyId + ((12 * i) / octaveDivision)
+  }
+
+  return keysState
+}

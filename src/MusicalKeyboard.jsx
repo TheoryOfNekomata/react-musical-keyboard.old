@@ -1,27 +1,35 @@
 import * as React from 'react'
 import * as PropTypes from 'prop-types'
-import isAccidental from './services/isAccidental'
-import calculateWidth from './services/calculateWidth'
-import calculateHeight from './services/calculateHeight'
-import calculateTop from './services/calculateTop'
-import calculateZIndex from './services/calculateZIndex'
 import createKeysState from './services/createKeysState'
+import * as METRICS from './services/metrics'
+import {
+  isInBetweenAccidental,
+  isProperAccidental,
+  snapToNearestAccidentalPlacement
+} from './services/isAccidentalPlacement'
 
-import OCTAVE_OFFSETS from './services/octaveOffsets'
-import EQUAL_OCTAVE_OFFSETS from './services/equalOctaveOffsets'
+const DEFAULT_CHANNEL_COLORS = [
+  '#000055',
+  '#005500',
+  '#550000',
+  '#555500',
+  '#0000aa',
+  '#00aa00',
+  '#00aaaa',
+  '#aa0000',
+  '#aa00aa',
+  '#aaaa00',
+  '#0000ff',
+  '#00ff00',
+  '#00ffff',
+  '#ff0000',
+  '#ff00ff',
+  '#ffff00',
+]
 
-const defaultKeyStyles = key => {
-  if (typeof key.velocity === 'number') {
-    return {
-      backgroundColor: 'Highlight',
-      border: '1px solid',
-    }
-  }
-  return {
-    backgroundColor: isAccidental(key.id) ? 'currentColor' : 'inherit',
-    border: '1px solid',
-  }
-}
+const defaultKeyStyles = () => ({
+  border: '1px solid black',
+})
 
 /**
  * A component for events that a controller with the likeness of a musical keyboard triggers (for instance, MIDI
@@ -30,7 +38,7 @@ const defaultKeyStyles = key => {
 const MusicalKeyboard = React.forwardRef(({
   startKey = 9,
   endKey = 96,
-  equalWidths = false,
+  keySpacing = 'standard',
   style: {
     main = {},
     key: keyStyles = defaultKeyStyles,
@@ -42,53 +50,45 @@ const MusicalKeyboard = React.forwardRef(({
   labels = () => null,
   keyboardMapping = null,
   accidentalKeyHeight = '65%',
+  inBetweenAccidentalKeyHeight = accidentalKeyHeight,
   keyboardVelocity = 0.75,
-  keysOn = {},
+  keysOn = [],
+  channelColors = DEFAULT_CHANNEL_COLORS,
   octaveDivision = 12,
-  disabled = false,
+  activeChannel = 0,
+  playable = false,
   ...props
-}, ref) => {
+}, keyboardRef) => {
   const [keysState, setKeysState, ] = React.useState(
     createKeysState(startKey, endKey, octaveDivision)
   )
-  const [k, setKeysOn, ] = React.useState([])
-  const keyboardRef = React.useRef(ref ? ref.current : null)
+  const [keysOnState, setKeysOn, ] = React.useState(keysOn)
 
-  const triggerKeyOn = source => (id, velocity) => {
-    console.log(source, 'on')
+  const triggerKeyOn = source => channel => (id, velocity) => {
     if (onKeyOn) {
       onKeyOn({
-        target: {
-          value: {
-            id,
-            velocity,
-          },
-        },
+        id,
+        velocity,
+        channel,
         source,
       })
     }
   }
 
-  const triggerKeyOff = source => id => {
-    console.log(source, 'off')
+  const triggerKeyOff = source => channel => id => {
     if (onKeyOff) {
       onKeyOff({
-        target: {
-          value: {
-            id,
-          },
-        },
+        id,
+        channel,
         source,
       })
     }
   }
 
-  const getKeyAndVelocity = e => {
-    const { clientY, clientX, } = e
-    const { current, } = keyboardRef
+  const getKeyAndVelocity = current => (clientX, clientY) => {
     const octaves = Array
-      .from(current.children).slice(0, -1)
-      .sort((a, b) => b.style.zIndex - a.style.zIndex)
+      .from(current.children[0].children)
+      .sort((a, b) => Number(b.dataset.octave) - Number(a.dataset.octave))
     const theOctave = octaves.find(o => {
       const { top, right, bottom, left, } = o.getBoundingClientRect()
 
@@ -103,7 +103,7 @@ const MusicalKeyboard = React.forwardRef(({
     if (theOctave) {
       const keys = Array
         .from(theOctave.children)
-        .sort((a, b) => b.style.zIndex - a.style.zIndex)
+        .reduce((r, o) => [o, ...r], [])
       const theKey = keys.find(k => {
         const { top, right, bottom, left, } = k.getBoundingClientRect()
 
@@ -127,58 +127,68 @@ const MusicalKeyboard = React.forwardRef(({
   }
 
   const handleMouseDown = e => {
-    if (e.buttons === 1) {
-      const keyAndVelocity = getKeyAndVelocity(e)
-      if (keyAndVelocity !== null) {
-        setKeysOn(oldKeysOn => {
-          const { velocity, id } = keyAndVelocity
-          triggerKeyOn('mouse')(id, velocity)
-          return [
-            ...oldKeysOn,
-            id,
-          ]
-        })
-      }
+    const { buttons, clientX, clientY, } = e
+    const { current, } = keyboardRef
+    if (buttons !== 1) {
+      return
+    }
+    const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
+    if (keyAndVelocity !== null) {
+      setKeysOn(oldKeysOn => {
+        const { velocity, id } = keyAndVelocity
+        triggerKeyOn('mouse')(activeChannel)(id, velocity)
+        return [
+          ...oldKeysOn,
+          [activeChannel, id, velocity, 'mouse'],
+        ]
+      })
     }
   }
 
   const handleMouseUp = e => {
-    const keyAndVelocity = getKeyAndVelocity(e)
+    const { clientX, clientY, } = e
+    const { current, } = keyboardRef
+    const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
     if (keyAndVelocity !== null) {
       setKeysOn(oldKeysOn => {
         const { id } = keyAndVelocity
-        triggerKeyOff('mouse')(id)
+        triggerKeyOff('mouse')(activeChannel)(id)
         return oldKeysOn.filter(k => k !== id)
       })
     }
   }
 
   const handleMouseMove = e => {
-    if (e.buttons === 1) {
-      const keyAndVelocity = getKeyAndVelocity(e)
-      setKeysOn(oldKeysOn => {
-        const removedKeys = keyAndVelocity !== null ? oldKeysOn.filter(k => k !== keyAndVelocity.id) : oldKeysOn
-        const retainedKeys = keyAndVelocity !== null ? [keyAndVelocity.id] : []
-
-        removedKeys.forEach(k => {
-          triggerKeyOff('mouse')(k)
-        })
-
-        if (keyAndVelocity !== null) {
-          if (!oldKeysOn.includes(keyAndVelocity.id)) {
-            triggerKeyOn('mouse')(keyAndVelocity.id, keyAndVelocity.velocity)
-          }
-        }
-
-        return retainedKeys
-      })
+    const { buttons, clientX, clientY, } = e
+    const { current, } = keyboardRef
+    if (buttons !== 1) {
+      return
     }
+    const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
+    setKeysOn(oldKeysOn => {
+      const removedKeys = keyAndVelocity !== null ? oldKeysOn.filter(k => k !== keyAndVelocity.id) : oldKeysOn
+      const retainedKeys = keyAndVelocity !== null ? [keyAndVelocity.id] : []
+
+      removedKeys.forEach(k => {
+        triggerKeyOff('mouse')(k)
+      })
+
+      if (keyAndVelocity !== null) {
+        if (!oldKeysOn.includes(keyAndVelocity.id)) {
+          triggerKeyOn('mouse')(keyAndVelocity.id, keyAndVelocity.velocity)
+        }
+      }
+
+      return retainedKeys
+    })
   }
 
   const handleTouchStart = e => {
     const { targetTouches, } = e
     Array.from(targetTouches).forEach(t => {
-      const keyAndVelocity = getKeyAndVelocity(t)
+      const { clientX, clientY, } = t
+      const { current, } = keyboardRef
+      const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
       if (keyAndVelocity !== null) {
         const { velocity, id } = keyAndVelocity
         triggerKeyOn('touch')(id, velocity)
@@ -189,7 +199,9 @@ const MusicalKeyboard = React.forwardRef(({
   const handleTouchMove = e => {
     const { targetTouches, } = e
     Array.from(targetTouches).forEach(t => {
-      const keyAndVelocity = getKeyAndVelocity(t)
+      const { clientX, clientY, } = t
+      const { current, } = keyboardRef
+      const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
       setKeysOn(oldKeysOn => {
         const removedKeys = keyAndVelocity !== null ? oldKeysOn.filter(k => k !== keyAndVelocity.id) : oldKeysOn
         const retainedKeys = keyAndVelocity !== null ? [keyAndVelocity.id] : []
@@ -212,10 +224,12 @@ const MusicalKeyboard = React.forwardRef(({
   const handleTouchEnd = e => {
     const { changedTouches, } = e
     Array.from(changedTouches).forEach(t => {
-      const keyAndVelocity = getKeyAndVelocity(t)
+      const { clientX, clientY, } = t
+      const { current, } = keyboardRef
+      const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
       if (keyAndVelocity !== null) {
         const { id } = keyAndVelocity
-        triggerKeyOff('touch')(id)
+        triggerKeyOff('touch')(activeChannel)(id)
       }
     })
   }
@@ -228,7 +242,7 @@ const MusicalKeyboard = React.forwardRef(({
       const { keyCode, } = e
       const { [keyCode]: id = null, } = keyboardMapping
       if (typeof id === 'number') {
-        triggerKeyOn('keyboard')({ id, }, 0.75)
+        triggerKeyOn('keyboard')(activeChannel)(id, 0.75)
       }
     }
 
@@ -239,29 +253,38 @@ const MusicalKeyboard = React.forwardRef(({
       const { keyCode, } = e
       const { [keyCode]: id = null, } = keyboardMapping
       if (typeof id === 'number') {
-        triggerKeyOff('keyboard')({ id, })
+        triggerKeyOff('keyboard')(activeChannel)(id)
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown, { capture: true, })
-    window.addEventListener('keyup', handleKeyUp, { capture: true, })
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown, { capture: true, })
-      window.removeEventListener('keyup', handleKeyUp, { capture: true, })
+    if (playable) {
+      window.addEventListener('keydown', handleKeyDown, { capture: true, })
+      window.addEventListener('keyup', handleKeyUp, { capture: true, })
     }
-  }, [])
+    return () => {
+      if (playable) {
+        window.removeEventListener('keydown', handleKeyDown, { capture: true, })
+        window.removeEventListener('keyup', handleKeyUp, { capture: true, })
+      }
+    }
+  }, [playable, activeChannel, keyboardMapping, ])
 
   React.useEffect(() => {
     setKeysState(createKeysState(startKey, endKey, octaveDivision))
   }, [startKey, endKey, octaveDivision, ])
 
   React.useEffect(() => {
-    setKeysState(keys => keys.map(k => ({
-      ...k,
-      velocity: keysOn[k.id] || null,
-    })))
+    setKeysOn(keysOn)
   }, [keysOn, ])
+
+
+
+  // React.useEffect(() => {
+  //   setKeysState(keys => keys.map(k => ({
+  //     ...k,
+  //     velocity: keysOn[k.id] || null,
+  //   })))
+  // }, [keysOn, ])
 
   const octaves = keysState.reduce(
     (theOctaves, k) => {
@@ -278,139 +301,258 @@ const MusicalKeyboard = React.forwardRef(({
     {},
   )
 
-  const theOctaves = Object.entries(octaves)
+  const theOctaves = Object.entries(octaves).reduce((r, o) => [o, ...r], [])
+  const theOctaveOffsets = METRICS[keySpacing].offsets
+  const widths = METRICS[keySpacing].widths
 
   return (
     <div
       {...props}
       tabIndex={0}
-      style={{
-        ...main,
-        display: 'flex',
-        position: 'relative',
-        overflow: 'hidden',
-        lineHeight: 1,
-      }}
+      style={main}
       ref={keyboardRef}
     >
-      {
-        theOctaves.map(([octave, octaveKeys, ], i, theOctaves) => {
-          const theOctaveOffsets = equalWidths ? EQUAL_OCTAVE_OFFSETS : OCTAVE_OFFSETS
-          let flexBasis
-          let lastKeyOffsetId = (octaveKeys[octaveKeys.length - 1].id) % 12
-          let firstKeyOffsetId = (octaveKeys[0].id % 12)
-          flexBasis = Math.min(theOctaveOffsets[lastKeyOffsetId] + calculateWidth({ equalWidths, })(octaveKeys[octaveKeys.length - 1].id), 1)
-          let negative = theOctaveOffsets[firstKeyOffsetId]
-          flexBasis -= negative
-
-          return (
-            <div
-              key={octave}
-              style={{
-                width: `${(flexBasis) * 100}%`,
-                height: '100%',
-                backgroundColor: 'inherit',
-                zIndex: theOctaves.length - i,
-                position: 'relative',
-              }}
-            >
-              {
-                octaveKeys.map(key => {
-                  let keyWidth = calculateWidth({ equalWidths, })(key.id)
-                  keyWidth *= (1 / (flexBasis))
-
-                  let keyOffset = theOctaveOffsets[key.id % 12]
-                  keyOffset -= negative
-                  keyOffset *= (1 / flexBasis)
-
-                  return (
-                    <button
-                      key={key.id}
-                      data-key-id={key.id}
-                      tabIndex={-1}
-                      disabled={disabled}
-                      style={{
-                        position: 'absolute',
-                        top: calculateTop({ accidentalKeyHeight, octaveDivision, })(key.id),
-                        left: `${keyOffset * 100}%`,
-                        width: `${keyWidth * 100}%`,
-                        height: calculateHeight({ accidentalKeyHeight, octaveDivision, })(key.id),
-                        zIndex: calculateZIndex(key.id),
-                        backgroundColor: 'inherit',
-                        border: 0,
-                        background: 'transparent',
-                        font: 'inherit',
-                        padding: 0,
-                        appearance: 'none',
-                        WebkitAppearance: 'none',
-                        MozAppearance: 'none',
-                        outline: 0,
-                        color: 'inherit',
-                      }}
-                    >
-                      <span
-                        style={{
-                          backgroundColor: 'inherit',
-                          ...keyStyles(key),
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                      <span
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          filter: isAccidental(key.id) ? 'invert(1)' : null,
-                          display: 'flex',
-                          justifyContent: 'center',
-                          alignItems: 'flex-end',
-                          boxSizing: 'border-box',
-                          paddingBottom: '0.5rem',
-                        }}
-                      >
-                        <span
-                          style={{
-                            transform: 'rotate(-90deg)',
-                          }}
-                        >
-                          {
-                            typeof labels === 'function'
-                              ? labels(key)
-                              : null
-                          }
-                        </span>
-                      </span>
-                    </button>
-                  )
-                })
-              }
-            </div>
-          )
-        })
-      }
-      <div
+      <span
         style={{
           width: '100%',
           height: '100%',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          zIndex: theOctaves.length + 1,
+          display: 'flex',
+          flexDirection: 'row-reverse',
+          position: 'relative',
+          overflow: 'hidden',
+          lineHeight: 1,
         }}
-        onMouseMove={handleMouseMove}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      />
+      >
+        {
+          theOctaves.map(([octave, octaveKeys, ]) => {
+            const [firstKey, ] = octaveKeys
+            const { id: firstKeyId, } = firstKey
+            const [lastKey, ] = octaveKeys.slice(-1)
+            const { id: lastKeyId, } = lastKey
+            const lastKeyPitchClass = snapToNearestAccidentalPlacement(octaveDivision)(lastKeyId)
+            const firstKeyPitchClass = snapToNearestAccidentalPlacement(octaveDivision)(firstKeyId)
+            const { [lastKeyPitchClass]: lastKeyWidth, } = widths
+            const { [firstKeyPitchClass]: negative, [lastKeyPitchClass]: positive, } = theOctaveOffsets
+            const flexBasis = Math.min(positive + lastKeyWidth, 1) - negative
+
+            return (
+              <span
+                key={octave}
+                data-octave={octave}
+                style={{
+                  display: 'block',
+                  width: `${(flexBasis) * 100}%`,
+                  height: '100%',
+                  position: 'relative',
+                }}
+              >
+                {
+                  octaveKeys
+                    .filter(key => !(isInBetweenAccidental(octaveDivision)(key.id) || isProperAccidental(octaveDivision)(key.id)))
+                    .map(key => {
+                      const { id, } = key
+                      const placement = snapToNearestAccidentalPlacement(octaveDivision)(id)
+                      const { [placement]: baseKeyWidth, } = widths
+                      const keyWidth = baseKeyWidth * (1 / flexBasis)
+                      const { [placement]: keyPositive } = theOctaveOffsets
+                      const keyOffset = (keyPositive - negative) * (1 / flexBasis)
+                      return (
+                        <span
+                          key={id}
+                          data-key-id={id}
+                          tabIndex={-1}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: `${keyOffset * 100}%`,
+                            width: `${keyWidth * 100}%`,
+                            height: '100%',
+                            border: 0,
+                            font: 'inherit',
+                            padding: 0,
+                            appearance: 'none',
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'none',
+                            outline: 0,
+                            color: 'inherit',
+                          }}
+                        >
+                          <span
+                            style={{
+                              ...keyStyles(key),
+                              backgroundColor: 'white',
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                          <span
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              justifyContent: 'center',
+                              alignItems: 'flex-end',
+                              boxSizing: 'border-box',
+                              paddingBottom: '0.5rem',
+                            }}
+                          >
+                            <span
+                              style={{
+                                transform: 'rotate(-90deg)',
+                              }}
+                            >
+                              {
+                                typeof labels === 'function'
+                                  ? labels(key)
+                                  : null
+                              }
+                            </span>
+                          </span>
+                        </span>
+                      )
+                    })
+                }
+                {
+                  Object
+                    .entries(
+                      octaveKeys
+                        .filter(key => (isInBetweenAccidental(octaveDivision)(key.id) || isProperAccidental(octaveDivision)(key.id)))
+                        .reduce(
+                          (grouped, key) => {
+                            const placement = snapToNearestAccidentalPlacement(octaveDivision)(key.id)
+                            const { [placement]: group = [] } = grouped
+                            return {
+                              ...grouped,
+                              [placement]: [
+                                ...group,
+                                key
+                              ]
+                            }
+                          },
+                          {}
+                        )
+                    )
+                    .map(([placement, group]) => {
+                      const { [placement]: baseKeyWidth, } = widths
+                      const keyWidth = baseKeyWidth * (1 / flexBasis)
+                      const { [placement]: keyPositive } = theOctaveOffsets
+                      const keyOffset = (keyPositive - negative) * (1 / flexBasis)
+                      return (
+                        <span
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: `${keyOffset * 100}%`,
+                            width: `${keyWidth * 100}%`,
+                            height: isInBetweenAccidental(octaveDivision)(placement) ? inBetweenAccidentalKeyHeight : accidentalKeyHeight,
+                            border: 0,
+                            font: 'inherit',
+                            padding: 0,
+                            appearance: 'none',
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'none',
+                            outline: 0,
+                            color: 'inherit',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'stretch',
+                          }}
+                        >
+                          {
+                            group.map(key => {
+                              const { id, } = key
+
+                              return (
+                                <span
+                                  key={id}
+                                  data-key-id={id}
+                                  tabIndex={-1}
+                                  style={{
+                                    height: '100%',
+                                    position: 'relative',
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      backgroundColor: placement !== '4.5' && placement !== '11.5' ? '#666' : '#eee',
+                                      ...keyStyles(key),
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      boxSizing: 'border-box',
+                                    }}
+                                  />
+                                  <span
+                                    style={{
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      filter: 'invert(1)',
+                                      display: 'flex',
+                                      justifyContent: 'center',
+                                      alignItems: 'flex-end',
+                                      boxSizing: 'border-box',
+                                      paddingBottom: '0.5rem',
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        transform: 'rotate(-90deg)',
+                                      }}
+                                    >
+                                      {
+                                        typeof labels === 'function'
+                                          ? labels(key)
+                                          : null
+                                      }
+                                    </span>
+                                  </span>
+                                </span>
+                              )
+                            })
+                          }
+                        </span>
+                      )
+                    })
+                }
+              </span>
+            )
+          })
+        }
+      </span>
+      {
+        playable
+        && (
+          <span
+            style={{
+              width: '100%',
+              height: '100%',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              display: 'block',
+              cursor: 'pointer',
+            }}
+            onMouseMove={handleMouseMove}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          />
+        )
+      }
     </div>
   )
 })
@@ -440,13 +582,13 @@ MusicalKeyboard.propTypes = {
   /** The velocity of the key when the keyboard is used to activate the key. */
   keyboardVelocity: PropTypes.number,
   /** How many notes should encompass a single octave? */
-  octaveDivision: PropTypes.oneOf([12, 24, ]),
-  /** Does any key occupy the same width? */
-  equalWidths: PropTypes.bool,
+  octaveDivision: PropTypes.number,
+  /** Manner of spacing of the keys? */
+  keySpacing: PropTypes.oneOf(['standard', 'fruityLoops']),
   /** The array of activated keys via their key numbers. */
   keysOn: PropTypes.object,
   /** Is the component active? */
-  disabled: PropTypes.bool,
+  playable: PropTypes.bool,
 }
 
 export default MusicalKeyboard
