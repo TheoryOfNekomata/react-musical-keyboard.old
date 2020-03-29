@@ -360,7 +360,6 @@ const MusicalKeyboard = React.forwardRef(({
                         <span
                           key={id}
                           data-key-id={id}
-                          tabIndex={-1}
                           style={{
                             position: 'absolute',
                             top: 0,
@@ -474,7 +473,6 @@ const MusicalKeyboard = React.forwardRef(({
                                 <span
                                   key={id}
                                   data-key-id={id}
-                                  tabIndex={-1}
                                   style={{
                                     height: '100%',
                                     position: 'relative',
