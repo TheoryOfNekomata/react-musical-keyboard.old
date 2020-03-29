@@ -335,6 +335,31 @@ const MusicalKeyboard = React.forwardRef(({
             const { [firstKeyPitchClass]: negative, [lastKeyPitchClass]: positive, } = theOctaveOffsets
             const flexBasis = Math.min(positive + lastKeyWidth, 1) - negative
 
+            const naturalKeys = octaveKeys.filter(key => !(
+              isInBetweenAccidental(octaveDivision)(key.id)
+              || isProperAccidental(octaveDivision)(key.id)
+            ))
+
+            const accidentalKeyGroups = Object
+              .entries(
+                octaveKeys
+                  .filter(key => (isInBetweenAccidental(octaveDivision)(key.id) || isProperAccidental(octaveDivision)(key.id)))
+                  .reduce(
+                    (grouped, key) => {
+                      const placement = snapToNearestAccidentalPlacement(octaveDivision)(key.id)
+                      const { [placement]: group = [] } = grouped
+                      return {
+                        ...grouped,
+                        [placement]: [
+                          ...group,
+                          key
+                        ]
+                      }
+                    },
+                    {}
+                  )
+              )
+
             return (
               <span
                 key={octave}
@@ -347,8 +372,7 @@ const MusicalKeyboard = React.forwardRef(({
                 }}
               >
                 {
-                  octaveKeys
-                    .filter(key => !(isInBetweenAccidental(octaveDivision)(key.id) || isProperAccidental(octaveDivision)(key.id)))
+                  naturalKeys
                     .map(key => {
                       const { id, } = key
                       const placement = snapToNearestAccidentalPlacement(octaveDivision)(id)
@@ -419,25 +443,7 @@ const MusicalKeyboard = React.forwardRef(({
                     })
                 }
                 {
-                  Object
-                    .entries(
-                      octaveKeys
-                        .filter(key => (isInBetweenAccidental(octaveDivision)(key.id) || isProperAccidental(octaveDivision)(key.id)))
-                        .reduce(
-                          (grouped, key) => {
-                            const placement = snapToNearestAccidentalPlacement(octaveDivision)(key.id)
-                            const { [placement]: group = [] } = grouped
-                            return {
-                              ...grouped,
-                              [placement]: [
-                                ...group,
-                                key
-                              ]
-                            }
-                          },
-                          {}
-                        )
-                    )
+                  accidentalKeyGroups
                     .map(([placement, group]) => {
                       const { [placement]: baseKeyWidth, } = widths
                       const keyWidth = baseKeyWidth * (1 / flexBasis)
