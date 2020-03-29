@@ -57,7 +57,7 @@ Storybook
       <MusicalKeyboard
         startKey={startKey}
         endKey={endKey}
-        keySpacing={select('Key spacing', ['standard', 'fruityLoops'], 'standard')}
+        keySpacing={select('Key spacing', ['standard', 'fruityLoops', 'garageBand'], 'standard')}
         accidentalKeyHeight={number('Accidental key height', 65, { range: true, min: 1, max: 100, }) + '%'}
         inBetweenAccidentalKeyHeight={number('In-between accidental key height', 44, { range: true, min: 1, max: 100, }) + '%'}
         keysOn={keysOn[select(

@@ -1,0 +1,15 @@
+export const C = 0
+export const C_SHARP = 1
+export const D = 2
+export const D_SHARP = 3
+export const E = 4
+export const E_SHARP = 4.5
+export const F = 5
+export const F_SHARP = 6
+export const G = 7
+export const G_SHARP = 8
+export const A = 9
+export const A_SHARP = 10
+export const B = 11
+export const B_SHARP = 11.5
+export const C_NEXT_OCTAVE = 12

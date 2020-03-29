@@ -1,4 +1,4 @@
-import { snapToNearestAccidentalPlacement } from './isAccidentalPlacement'
+import getKeyPlacement from './getKeyPlacement'
 
 export default (startKeyId, endKeyId, octaveDivision) => {
   const keysState = []
@@ -19,7 +19,9 @@ export default (startKeyId, endKeyId, octaveDivision) => {
   } while (j <= endKeyId)
 
   const [firstKey, ] = keysState
-  if (snapToNearestAccidentalPlacement(octaveDivision)(Number(firstKey.id)) !== snapToNearestAccidentalPlacement(12)(startKeyId)) {
+  const firstKeyPlacement = getKeyPlacement(octaveDivision)(Number(firstKey.id))
+  const firstKeyPlacement12Edo = getKeyPlacement(12)(startKeyId)
+  if (firstKeyPlacement !== firstKeyPlacement12Edo) {
     keysState.unshift({
       id: startKeyId,
       velocity: null,
@@ -28,7 +30,9 @@ export default (startKeyId, endKeyId, octaveDivision) => {
   }
 
   const [lastKey, ] = keysState.slice(-1)
-  if (snapToNearestAccidentalPlacement(octaveDivision)(Number(lastKey.id)) === snapToNearestAccidentalPlacement(12)(endKeyId)) {
+  const lastKeyPlacement = getKeyPlacement(octaveDivision)(Number(lastKey.id))
+  const lastKeyPlacement12Edo = getKeyPlacement(12)(endKeyId)
+  if (lastKeyPlacement !== lastKeyPlacement12Edo) {
     keysState.push({
       id: endKeyId,
       velocity: null,

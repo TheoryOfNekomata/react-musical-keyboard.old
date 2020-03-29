@@ -2,11 +2,9 @@ import * as React from 'react'
 import * as PropTypes from 'prop-types'
 import createKeysState from './services/createKeysState'
 import * as METRICS from './services/metrics'
-import {
-  isInBetweenAccidental,
-  isProperAccidental,
-  snapToNearestAccidentalPlacement
-} from './services/isAccidentalPlacement'
+import isProperAccidental from './services/isProperAccidental'
+import isInBetweenAccidental from './services/isInBetweenAccidental'
+import getKeyPlacement from './services/getKeyPlacement'
 
 const DEFAULT_CHANNEL_COLORS = [
   '#000055',
@@ -329,8 +327,8 @@ const MusicalKeyboard = React.forwardRef(({
             const { id: firstKeyId, } = firstKey
             const [lastKey, ] = octaveKeys.slice(-1)
             const { id: lastKeyId, } = lastKey
-            const lastKeyPitchClass = snapToNearestAccidentalPlacement(octaveDivision)(lastKeyId)
-            const firstKeyPitchClass = snapToNearestAccidentalPlacement(octaveDivision)(firstKeyId)
+            const lastKeyPitchClass = getKeyPlacement(octaveDivision)(lastKeyId)
+            const firstKeyPitchClass = getKeyPlacement(octaveDivision)(firstKeyId)
             const { [lastKeyPitchClass]: lastKeyWidth, } = widths
             const { [firstKeyPitchClass]: negative, [lastKeyPitchClass]: positive, } = theOctaveOffsets
             const flexBasis = Math.min(positive + lastKeyWidth, 1) - negative
@@ -346,7 +344,7 @@ const MusicalKeyboard = React.forwardRef(({
                   .filter(key => (isInBetweenAccidental(octaveDivision)(key.id) || isProperAccidental(octaveDivision)(key.id)))
                   .reduce(
                     (grouped, key) => {
-                      const placement = snapToNearestAccidentalPlacement(octaveDivision)(key.id)
+                      const placement = getKeyPlacement(octaveDivision)(key.id)
                       const { [placement]: group = [] } = grouped
                       return {
                         ...grouped,
@@ -375,7 +373,7 @@ const MusicalKeyboard = React.forwardRef(({
                   naturalKeys
                     .map(key => {
                       const { id, } = key
-                      const placement = snapToNearestAccidentalPlacement(octaveDivision)(id)
+                      const placement = getKeyPlacement(octaveDivision)(id)
                       const { [placement]: baseKeyWidth, } = widths
                       const keyWidth = baseKeyWidth * (1 / flexBasis)
                       const { [placement]: keyPositive } = theOctaveOffsets
@@ -565,9 +563,17 @@ const MusicalKeyboard = React.forwardRef(({
 MusicalKeyboard.displayName = 'MusicalKeyboard'
 
 MusicalKeyboard.propTypes = {
-  /** The starting key number of the keyboard. */
+  /**
+   * The starting key number of the keyboard.
+   * This is an integer value which corresponds to a pitch with 12-EDO reference
+   * (e.g. multiples of 12 are the same pitch with different octaves
+   * */
   startKey: PropTypes.number,
-  /** The ending key number of the keyboard. */
+  /**
+   * The ending key number of the keyboard.
+   * This is an integer value which corresponds to a pitch with 12-EDO reference
+   * (e.g. multiples of 12 are the same pitch with different octaves
+   * */
   endKey: PropTypes.number,
   /** The outer style of the keyboard. */
   style: PropTypes.shape({
