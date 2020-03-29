@@ -466,8 +466,9 @@ const MusicalKeyboard = React.forwardRef(({
                           }}
                         >
                           {
-                            group.map(key => {
+                            group.map((key, i, g) => {
                               const { id, } = key
+                              const dark = (g.length - 1 - i) % 2 === 0
 
                               return (
                                 <span
@@ -481,7 +482,7 @@ const MusicalKeyboard = React.forwardRef(({
                                 >
                                   <span
                                     style={{
-                                      backgroundColor: placement !== '4.5' && placement !== '11.5' ? '#666' : '#eee',
+                                      backgroundColor: placement !== '4.5' && placement !== '11.5' ? (dark ? '#444' : '#888') : (dark ? '#ccc' : '#eee'),
                                       ...keyStyles(key),
                                       position: 'absolute',
                                       top: 0,
