@@ -5,6 +5,7 @@ import * as METRICS from './services/metrics'
 import isProperAccidental from './services/isProperAccidental'
 import isInBetweenAccidental from './services/isInBetweenAccidental'
 import getKeyPlacement from './services/getKeyPlacement'
+import getKeyAndVelocity from './services/getKeyAndVelocity'
 
 const DEFAULT_CHANNEL_COLORS = [
   '#000055',
@@ -56,166 +57,122 @@ const MusicalKeyboard = React.forwardRef(({
   activeChannel = 0,
   playable = false,
   ...props
-}, keyboardRef) => {
+}, passedRef) => {
   const [keysState, setKeysState, ] = React.useState(
     createKeysState(startKey, endKey, octaveDivision)
   )
+  const [theOctaves, setOctaves, ] = React.useState([])
   const [keysOnState, setKeysOn, ] = React.useState(keysOn)
-
-  const triggerKeyOn = source => channel => (id, velocity) => {
-    if (onKeyOn) {
-      onKeyOn({
-        id,
-        velocity,
-        channel,
-        source,
-      })
-    }
-  }
-
-  const triggerKeyOff = source => channel => id => {
-    if (onKeyOff) {
-      onKeyOff({
-        id,
-        channel,
-        source,
-      })
-    }
-  }
-
-  const getKeyAndVelocity = current => (clientX, clientY) => {
-    const octaves = Array
-      .from(current.children[0].children)
-      .sort((a, b) => Number(b.dataset.octave) - Number(a.dataset.octave))
-    const theOctave = octaves.find(o => {
-      const { top, right, bottom, left, } = o.getBoundingClientRect()
-
-      return (
-        left <= clientX
-        && clientX <= right
-        && top <= clientY
-        && clientY <= bottom
-      )
-    })
-
-    if (theOctave) {
-      const keys = Array
-        .from(theOctave.children)
-        .reduce((r, o) => [o, ...r], [])
-      const theKey = keys.find(k => {
-        const { top, right, bottom, left, } = k.getBoundingClientRect()
-
-        return (
-          left <= clientX
-          && clientX <= right
-          && top <= clientY
-          && clientY <= bottom
-        )
-      })
-      const { offsetHeight, } = theKey
-      const { top, } = current.getBoundingClientRect()
-      const offsetY = clientY - top
-      return {
-        id: Number(theKey.dataset.keyId),
-        velocity: offsetY / offsetHeight
-      }
-    }
-
-    return null
-  }
+  const [metrics, setMetrics, ] = React.useState(METRICS[keySpacing])
+  const [playedKeysOnState, setPlayedKeysOnState, ] = React.useState(keysOn)
+  const [, setMouseVelocity, ] = React.useState(0)
+  const [touch, setTouch, ] = React.useState(false)
+  const keyboardRef = passedRef || React.useRef(null)
 
   const handleMouseDown = e => {
+    if (touch) {
+      return
+    }
     const { buttons, clientX, clientY, } = e
-    const { current, } = keyboardRef
     if (buttons !== 1) {
       return
     }
+    const { current, } = keyboardRef
     const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
     if (keyAndVelocity !== null) {
-      setKeysOn(oldKeysOn => {
-        const { velocity, id } = keyAndVelocity
-        triggerKeyOn('mouse')(activeChannel)(id, velocity)
-        return [
+      const { velocity, id } = keyAndVelocity
+      setMouseVelocity(oldVelocity => {
+        const theVelocity = oldVelocity === null ? velocity : oldVelocity
+        setKeysOn(oldKeysOn => [
           ...oldKeysOn,
-          [activeChannel, id, velocity, 'mouse'],
-        ]
+          [activeChannel, id, theVelocity],
+        ])
+        return theVelocity
       })
     }
   }
 
   const handleMouseUp = e => {
+    if (touch) {
+      return
+    }
     const { clientX, clientY, } = e
     const { current, } = keyboardRef
     const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
     if (keyAndVelocity !== null) {
-      setKeysOn(oldKeysOn => {
-        const { id } = keyAndVelocity
-        triggerKeyOff('mouse')(activeChannel)(id)
-        return oldKeysOn.filter(k => k !== id)
+      const { id } = keyAndVelocity
+      setMouseVelocity(() => {
+        setKeysOn(oldKeysOn => oldKeysOn.filter(([c, k,]) => !(
+          c === activeChannel
+          || k === id
+        )))
+        return null
       })
     }
   }
 
   const handleMouseMove = e => {
     const { buttons, clientX, clientY, } = e
-    const { current, } = keyboardRef
     if (buttons !== 1) {
       return
     }
+    const { current, } = keyboardRef
     const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
-    setKeysOn(oldKeysOn => {
-      const removedKeys = keyAndVelocity !== null ? oldKeysOn.filter(k => k !== keyAndVelocity.id) : oldKeysOn
-      const retainedKeys = keyAndVelocity !== null ? [keyAndVelocity.id] : []
-
-      removedKeys.forEach(k => {
-        triggerKeyOff('mouse')(k)
+    if (keyAndVelocity !== null) {
+      const { id, } = keyAndVelocity
+      setMouseVelocity(oldVelocity => {
+        setKeysOn(oldKeysOn => [
+          ...oldKeysOn.filter(([c, k, ]) => !(
+            c === activeChannel
+            || k === id
+          )),
+          [activeChannel, id, oldVelocity],
+        ])
+        return oldVelocity
       })
-
-      if (keyAndVelocity !== null) {
-        if (!oldKeysOn.includes(keyAndVelocity.id)) {
-          triggerKeyOn('mouse')(keyAndVelocity.id, keyAndVelocity.velocity)
-        }
-      }
-
-      return retainedKeys
-    })
+    }
   }
 
   const handleTouchStart = e => {
+    setTouch(true)
     const { targetTouches, } = e
     Array.from(targetTouches).forEach(t => {
       const { clientX, clientY, } = t
       const { current, } = keyboardRef
       const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
       if (keyAndVelocity !== null) {
-        const { velocity, id } = keyAndVelocity
-        triggerKeyOn('touch')(id, velocity)
+        const { velocity, id, } = keyAndVelocity
+        setMouseVelocity(oldVelocity => {
+          const theVelocity = oldVelocity === null ? velocity : oldVelocity
+          setKeysOn(oldKeysOn => [
+            ...oldKeysOn,
+            [activeChannel, id, theVelocity],
+          ])
+          return theVelocity
+        })
       }
     })
   }
 
   const handleTouchMove = e => {
-    const { targetTouches, } = e
-    Array.from(targetTouches).forEach(t => {
+    const { changedTouches, } = e
+    Array.from(changedTouches).forEach(t => {
       const { clientX, clientY, } = t
       const { current, } = keyboardRef
       const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
-      setKeysOn(oldKeysOn => {
-        const removedKeys = keyAndVelocity !== null ? oldKeysOn.filter(k => k !== keyAndVelocity.id) : oldKeysOn
-        const retainedKeys = keyAndVelocity !== null ? [keyAndVelocity.id] : []
-
-        removedKeys.forEach(k => {
-          triggerKeyOff('touch')(k)
+      if (keyAndVelocity !== null) {
+        const { id, } = keyAndVelocity
+        setMouseVelocity(oldVelocity => {
+          setKeysOn(oldKeysOn => [
+            ...oldKeysOn.filter(([c, k,]) => !(
+              c === activeChannel
+              || k === id
+            )),
+            [activeChannel, id, oldVelocity],
+          ])
+          return oldVelocity
         })
-
-        if (keyAndVelocity !== null) {
-          if (!oldKeysOn.includes(keyAndVelocity.id)) {
-            triggerKeyOn('touch')(keyAndVelocity.id, keyAndVelocity.velocity)
-          }
-        }
-
-        return retainedKeys
-      })
+      }
     })
   }
 
@@ -226,8 +183,16 @@ const MusicalKeyboard = React.forwardRef(({
       const { current, } = keyboardRef
       const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
       if (keyAndVelocity !== null) {
-        const { id } = keyAndVelocity
-        triggerKeyOff('touch')(activeChannel)(id)
+        const { id, } = keyAndVelocity
+        setMouseVelocity(oldVelocity => {
+          setKeysOn(oldKeysOn => [
+            ...oldKeysOn.filter(([c, k, ]) => !(
+              c === activeChannel
+              || k === id
+            )),
+          ])
+          return oldVelocity
+        })
       }
     })
   }
@@ -239,8 +204,19 @@ const MusicalKeyboard = React.forwardRef(({
       }
       const { keyCode, } = e
       const { [keyCode]: id = null, } = keyboardMapping
-      if (typeof id === 'number') {
-        triggerKeyOn('keyboard')(activeChannel)(id, 0.75)
+      if (['string', 'number'].includes(typeof id)) {
+        setKeysOn(oldKeysOn => {
+          const keyMatch = oldKeysOn.find(([c2, k2]) => {
+            return c2 === activeChannel && id === k2
+          })
+
+          return Boolean(keyMatch)
+            ? oldKeysOn
+            : [
+              ...oldKeysOn,
+              [activeChannel, id, keyboardVelocity],
+            ]
+        })
       }
     }
 
@@ -250,8 +226,13 @@ const MusicalKeyboard = React.forwardRef(({
       }
       const { keyCode, } = e
       const { [keyCode]: id = null, } = keyboardMapping
-      if (typeof id === 'number') {
-        triggerKeyOff('keyboard')(activeChannel)(id)
+      if (['string', 'number'].includes(typeof id)) {
+        setKeysOn(oldKeysOn => oldKeysOn.filter(([c, k, ]) => {
+          if (c !== activeChannel) {
+            return true
+          }
+          return (k !== id)
+        }))
       }
     }
 
@@ -265,49 +246,103 @@ const MusicalKeyboard = React.forwardRef(({
         window.removeEventListener('keyup', handleKeyUp, { capture: true, })
       }
     }
-  }, [playable, activeChannel, keyboardMapping, ])
+  }, [playable, activeChannel, keyboardMapping, keyboardRef, keyboardVelocity, ])
 
   React.useEffect(() => {
     setKeysState(createKeysState(startKey, endKey, octaveDivision))
   }, [startKey, endKey, octaveDivision, ])
 
   React.useEffect(() => {
-    setKeysOn(keysOn)
-  }, [keysOn, ])
+    setPlayedKeysOnState(oldPlayedKeysOnState => {
+      const added = keysOnState.filter(([c, k,]) => {
+        const keyMatch = oldPlayedKeysOnState.find(([c2, k2]) => {
+          return c2 === c && k === k2
+        })
+        const hasMatch = Boolean(keyMatch)
+        return !hasMatch
+      })
 
+      const removed = oldPlayedKeysOnState.filter(([c, k,]) => {
+        const keyMatch = keysOnState.find(([c2, k2]) => {
+          return c2 === c && k === k2
+        })
+        const hasMatch = Boolean(keyMatch)
+        return !hasMatch
+      })
 
+      const retained = keysOnState.filter(([c, k,]) => {
+        const keyMatch = oldPlayedKeysOnState.find(([c2, k2]) => {
+          return c2 === c && k === k2
+        })
+        return Boolean(keyMatch)
+      })
 
-  // React.useEffect(() => {
-  //   setKeysState(keys => keys.map(k => ({
-  //     ...k,
-  //     velocity: keysOn[k.id] || null,
-  //   })))
-  // }, [keysOn, ])
+      added.forEach(([c, k, v, s]) => {
+        if (onKeyOn) {
+          onKeyOn({
+            id: k,
+            channel: c,
+            velocity: v,
+            source: s,
+          })
+        }
+      })
 
-  const octaves = keysState.reduce(
-    (theOctaves, k) => {
-      const octave = Math.floor(k.id / 12)
-      const { [octave]: theOctave = [], } = theOctaves
-      return {
-        ...theOctaves,
-        [octave]: [
-          ...theOctave,
-          k,
-        ]
-      }
-    },
-    {},
-  )
+      removed.forEach(([c, k, v, s]) => {
+        if (onKeyOff) {
+          onKeyOff({
+            id: k,
+            channel: c,
+            velocity: v,
+            source: s,
+          })
+        }
+      })
 
-  const theOctaves = Object.entries(octaves).reduce((r, o) => [o, ...r], [])
-  const theOctaveOffsets = METRICS[keySpacing].offsets
-  const widths = METRICS[keySpacing].widths
+      return [
+        ...retained,
+        ...added,
+      ]
+    })
+  }, [keysOnState, onKeyOff, onKeyOn, ])
+
+  React.useEffect(() => {
+    setTouch(false)
+  }, [])
+
+  React.useEffect(() => {
+    const octaves = keysState.reduce(
+      (theOctaves, k) => {
+        const octave = Math.floor(k.id / 12)
+        const { [octave]: theOctave = [], } = theOctaves
+        return {
+          ...theOctaves,
+          [octave]: [
+            ...theOctave,
+            k,
+          ]
+        }
+      },
+      {},
+    )
+    setOctaves(
+      Object.entries(octaves).reduce((r, o) => [o, ...r], [])
+    )
+  }, [keysState, ])
+
+  React.useEffect(() => {
+    setMetrics(METRICS[keySpacing])
+  }, [keySpacing, ])
 
   return (
     <div
       {...props}
-      tabIndex={0}
-      style={main}
+      tabIndex={playable ? 0 : null}
+      style={{
+        ...main,
+        position: 'relative',
+        WebkitTapHighlightColor: 'rgba(255, 255, 255, 0)',
+      }}
       ref={keyboardRef}
     >
       <span
@@ -316,7 +351,6 @@ const MusicalKeyboard = React.forwardRef(({
           height: '100%',
           display: 'flex',
           flexDirection: 'row-reverse',
-          position: 'relative',
           overflow: 'hidden',
           lineHeight: 1,
         }}
@@ -329,8 +363,8 @@ const MusicalKeyboard = React.forwardRef(({
             const { id: lastKeyId, } = lastKey
             const lastKeyPitchClass = getKeyPlacement(octaveDivision)(lastKeyId)
             const firstKeyPitchClass = getKeyPlacement(octaveDivision)(firstKeyId)
-            const { [lastKeyPitchClass]: lastKeyWidth, } = widths
-            const { [firstKeyPitchClass]: negative, [lastKeyPitchClass]: positive, } = theOctaveOffsets
+            const { [lastKeyPitchClass]: lastKeyWidth, } = metrics.widths
+            const { [firstKeyPitchClass]: negative, [lastKeyPitchClass]: positive, } = metrics.offsets
             const flexBasis = Math.min(positive + lastKeyWidth, 1) - negative
 
             const naturalKeys = octaveKeys.filter(key => !(
@@ -361,7 +395,6 @@ const MusicalKeyboard = React.forwardRef(({
             return (
               <span
                 key={octave}
-                data-octave={octave}
                 style={{
                   display: 'block',
                   width: `${(flexBasis) * 100}%`,
@@ -374,14 +407,15 @@ const MusicalKeyboard = React.forwardRef(({
                     .map(key => {
                       const { id, } = key
                       const placement = getKeyPlacement(octaveDivision)(id)
-                      const { [placement]: baseKeyWidth, } = widths
+                      const { [placement]: baseKeyWidth, } = metrics.widths
                       const keyWidth = baseKeyWidth * (1 / flexBasis)
-                      const { [placement]: keyPositive } = theOctaveOffsets
+                      const { [placement]: keyPositive } = metrics.offsets
                       const keyOffset = (keyPositive - negative) * (1 / flexBasis)
+                      const dataId = (octave * 12) + placement
                       return (
                         <span
                           key={id}
-                          data-key-id={id}
+                          data-id={dataId}
                           style={{
                             position: 'absolute',
                             top: 0,
@@ -410,6 +444,24 @@ const MusicalKeyboard = React.forwardRef(({
                               boxSizing: 'border-box',
                             }}
                           />
+                          {
+                            playedKeysOnState
+                              .filter(([, i]) => String(i) === String(dataId))
+                              .map(([c, , v]) => (
+                                <span
+                                  key={c + ':' + dataId}
+                                  style={{
+                                    backgroundColor: channelColors[c],
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    opacity: 0.25 + (0.5 * v),
+                                  }}
+                                />
+                              ))
+                          }
                           <span
                             style={{
                               position: 'absolute',
@@ -443,12 +495,13 @@ const MusicalKeyboard = React.forwardRef(({
                 {
                   accidentalKeyGroups
                     .map(([placement, group]) => {
-                      const { [placement]: baseKeyWidth, } = widths
+                      const { [placement]: baseKeyWidth, } = metrics.widths
                       const keyWidth = baseKeyWidth * (1 / flexBasis)
-                      const { [placement]: keyPositive } = theOctaveOffsets
+                      const { [placement]: keyPositive } = metrics.offsets
                       const keyOffset = (keyPositive - negative) * (1 / flexBasis)
                       return (
                         <span
+                          key={placement}
                           style={{
                             position: 'absolute',
                             top: 0,
@@ -472,11 +525,12 @@ const MusicalKeyboard = React.forwardRef(({
                             group.map((key, i, g) => {
                               const { id, } = key
                               const dark = (g.length - 1 - i) % 2 === 0
+                              const dataId = ((octave * 12) + Number(placement)) + String.fromCharCode(i + 'a'.charCodeAt(0))
 
                               return (
                                 <span
                                   key={id}
-                                  data-key-id={id}
+                                  data-id={dataId}
                                   style={{
                                     height: '100%',
                                     position: 'relative',
@@ -494,6 +548,24 @@ const MusicalKeyboard = React.forwardRef(({
                                       boxSizing: 'border-box',
                                     }}
                                   />
+                                  {
+                                    playedKeysOnState
+                                      .filter(([, i]) => String(i) === String(dataId))
+                                      .map(([c, , v]) => (
+                                        <span
+                                          key={c + ':' + dataId}
+                                          style={{
+                                            backgroundColor: channelColors[c],
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            opacity: 0.25 + (0.5 * v),
+                                          }}
+                                        />
+                                      ))
+                                  }
                                   <span
                                     style={{
                                       position: 'absolute',
@@ -597,7 +669,7 @@ MusicalKeyboard.propTypes = {
   /** Manner of spacing of the keys? */
   keySpacing: PropTypes.oneOf(['standard', 'fruityLoops']),
   /** The array of activated keys via their key numbers. */
-  keysOn: PropTypes.object,
+  keysOn: PropTypes.array,
   /** Is the component active? */
   playable: PropTypes.bool,
 }

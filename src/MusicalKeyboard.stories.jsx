@@ -1,6 +1,7 @@
 import * as React from 'react'
 import * as Storybook from '@storybook/react'
-import { number, select, } from '@storybook/addon-knobs'
+import { boolean, number, select, } from '@storybook/addon-knobs'
+import { action, } from '@storybook/addon-actions'
 
 import MusicalKeyboard from './MusicalKeyboard.jsx'
 
@@ -55,6 +56,9 @@ Storybook
 
     return (
       <MusicalKeyboard
+        onKeyOn={action('Key On')}
+        onKeyOff={action('Key Off')}
+        playable={boolean('Playable', true)}
         startKey={startKey}
         endKey={endKey}
         keySpacing={select('Key spacing', ['standard', 'fruityLoops', 'garageBand'], 'standard')}
@@ -69,7 +73,7 @@ Storybook
             'D# major': 'eFlatMajor',
           },
           'none',
-        )].reduce((k, o) => ({...k, [o]: 127}), {})}
+        )].map(k => [0, k, 127])}
         octaveDivision={select('Octave division', [12, 17, 19, 24, 31, 36], 12)}
         style={{
           main: {

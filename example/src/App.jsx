@@ -25,12 +25,18 @@ const handleKeyOn = ({ setKeysOn, generator, activeChannel, }) => ({ id, velocit
     ...oldKeysOn,
     [channel, id, velocity],
   ])
-  generator.soundOn(activeChannel)(id, velocity * 0x7f)
+  generator.soundOn(activeChannel)(parseInt(id), velocity * 0x7f)
 }
 
 const handleKeyOff = ({ setKeysOn, generator, activeChannel, }) => ({ id, velocity, channel, source, }) => {
-  setKeysOn(oldKeysOn => oldKeysOn.filter(([c, i, ]) => c !== channel && i !== id))
-  generator.soundOff(activeChannel)(id, velocity * 0x7f)
+  setKeysOn(oldKeysOn => oldKeysOn.filter(([c, i, ]) => !(c === channel || i === id)))
+  generator.soundOff(activeChannel)(parseInt(id), velocity * 0x7f)
+}
+
+const handlePedalChange = ({ pedal, generator, activeChannel, ref, }) => value => () => {
+  generator.sendMessage(activeChannel)(pedal, value)
+  const { current, } = ref
+  current.focus()
 }
 
 const App = ({
@@ -137,6 +143,7 @@ const App = ({
         className="pedals"
       >
         <button
+          tabIndex={-1}
           type="button"
         >
           <svg
@@ -164,6 +171,7 @@ const App = ({
           </span>
         </button>
         <button
+          tabIndex={-1}
           type="button"
         >
           <svg
@@ -191,7 +199,10 @@ const App = ({
           </span>
         </button>
         <button
+          tabIndex={-1}
           type="button"
+          onMouseDown={handlePedalChange({ generator, pedal: 67, activeChannel, ref, })(127)}
+          onMouseUp={handlePedalChange({ generator, pedal: 67, activeChannel, ref, })(0)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -218,7 +229,10 @@ const App = ({
           </span>
         </button>
         <button
+          tabIndex={-1}
           type="button"
+          onMouseDown={handlePedalChange({ generator, pedal: 66, activeChannel, ref, })(127)}
+          onMouseUp={handlePedalChange({ generator, pedal: 66, activeChannel, ref, })(0)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -245,7 +259,10 @@ const App = ({
           </span>
         </button>
         <button
+          tabIndex={-1}
           type="button"
+          onMouseDown={handlePedalChange({ generator, pedal: 64, activeChannel, ref, })(127)}
+          onMouseUp={handlePedalChange({ generator, pedal: 64, activeChannel, ref, })(0)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
