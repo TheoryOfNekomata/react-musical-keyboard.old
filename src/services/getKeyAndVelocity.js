@@ -1,9 +1,27 @@
-export default current => (clientX, clientY) => {
-  const octaves = Array
-    .from(current.children[0].children)
-    .reduce((r, o) => [o, ...r], [])
-  const theOctave = octaves.find(o => {
-    const { top, right, bottom, left, } = o.getBoundingClientRect()
+let bounds
+
+export const recalculateBoundingClientRects = current => {
+  window.setTimeout(() => {
+    bounds = Array
+      .from(current.children[0].children)
+      .reduce((r, o) => [o, ...r], [])
+      .map(theOctave => ({
+        bounds: theOctave.getBoundingClientRect(),
+        children: Array
+          .from(theOctave.querySelectorAll('[data-id]'))
+          .reduce((r, o) => [o, ...r], [])
+          .map(k => ({
+            id: k.dataset.id,
+            offsetHeight: k.offsetHeight,
+            bounds: k.getBoundingClientRect(),
+          }))
+      }))
+  })
+}
+
+export default (clientX, clientY) => {
+  const theOctave = bounds.find(o => {
+    const { top, right, bottom, left, } = o.bounds
 
     return (
       left <= clientX
@@ -14,11 +32,9 @@ export default current => (clientX, clientY) => {
   })
 
   if (theOctave) {
-    const keys = Array
-      .from(theOctave.querySelectorAll('[data-id]'))
-      .reduce((r, o) => [o, ...r], [])
+    const keys = theOctave.children
     const theKey = keys.find(k => {
-      const { top, right, bottom, left, } = k.getBoundingClientRect()
+      const { top, right, bottom, left, } = k.bounds
 
       return (
         left <= clientX
@@ -29,15 +45,14 @@ export default current => (clientX, clientY) => {
     })
 
     if (theKey) {
-      const { offsetHeight, } = theKey
-      const { top, } = theKey.getBoundingClientRect()
+      const { offsetHeight, bounds, } = theKey
+      const { top, } = bounds
       const offsetY = clientY - top
       return {
-        id: theKey.dataset.id,
+        id: theKey.id,
         velocity: offsetY / offsetHeight
       }
     }
   }
-
   return null
 }

@@ -5,7 +5,7 @@ import * as METRICS from './services/metrics'
 import isProperAccidental from './services/isProperAccidental'
 import isInBetweenAccidental from './services/isInBetweenAccidental'
 import getKeyPlacement from './services/getKeyPlacement'
-import getKeyAndVelocity from './services/getKeyAndVelocity'
+import getKeyAndVelocity, { recalculateBoundingClientRects, } from './services/getKeyAndVelocity'
 
 const DEFAULT_CHANNEL_COLORS = [
   '#000055',
@@ -65,9 +65,9 @@ const MusicalKeyboard = React.forwardRef(({
   const [keysOnState, setKeysOn, ] = React.useState(keysOn)
   const [metrics, setMetrics, ] = React.useState(METRICS[keySpacing])
   const [playedKeysOnState, setPlayedKeysOnState, ] = React.useState(keysOn)
-  const [, setMouseVelocity, ] = React.useState(0)
   const [touch, setTouch, ] = React.useState(false)
   const keyboardRef = passedRef || React.useRef(null)
+  const mouseVelocity = React.useRef(null)
 
   const handleMouseDown = e => {
     if (touch) {
@@ -77,18 +77,17 @@ const MusicalKeyboard = React.forwardRef(({
     if (buttons !== 1) {
       return
     }
-    const { current, } = keyboardRef
-    const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
+    const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
     if (keyAndVelocity !== null) {
       const { velocity, id } = keyAndVelocity
-      setMouseVelocity(oldVelocity => {
+      mouseVelocity.current = (oldVelocity => {
         const theVelocity = oldVelocity === null ? velocity : oldVelocity
         setKeysOn(oldKeysOn => [
           ...oldKeysOn,
           [activeChannel, id, theVelocity],
         ])
         return theVelocity
-      })
+      })(mouseVelocity.current)
     }
   }
 
@@ -97,17 +96,16 @@ const MusicalKeyboard = React.forwardRef(({
       return
     }
     const { clientX, clientY, } = e
-    const { current, } = keyboardRef
-    const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
+    const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
     if (keyAndVelocity !== null) {
       const { id } = keyAndVelocity
-      setMouseVelocity(() => {
+      mouseVelocity.current = (() => {
         setKeysOn(oldKeysOn => oldKeysOn.filter(([c, k,]) => !(
           c === activeChannel
           || k === id
         )))
         return null
-      })
+      })()
     }
   }
 
@@ -116,11 +114,10 @@ const MusicalKeyboard = React.forwardRef(({
     if (buttons !== 1) {
       return
     }
-    const { current, } = keyboardRef
-    const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
+    const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
     if (keyAndVelocity !== null) {
       const { id, } = keyAndVelocity
-      setMouseVelocity(oldVelocity => {
+      mouseVelocity.current = (oldVelocity => {
         setKeysOn(oldKeysOn => [
           ...oldKeysOn.filter(([c, k, ]) => !(
             c === activeChannel
@@ -129,7 +126,7 @@ const MusicalKeyboard = React.forwardRef(({
           [activeChannel, id, oldVelocity],
         ])
         return oldVelocity
-      })
+      })(mouseVelocity.current)
     }
   }
 
@@ -138,18 +135,17 @@ const MusicalKeyboard = React.forwardRef(({
     const { targetTouches, } = e
     Array.from(targetTouches).forEach(t => {
       const { clientX, clientY, } = t
-      const { current, } = keyboardRef
-      const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
+      const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
       if (keyAndVelocity !== null) {
         const { velocity, id, } = keyAndVelocity
-        setMouseVelocity(oldVelocity => {
+        mouseVelocity.current = (oldVelocity => {
           const theVelocity = oldVelocity === null ? velocity : oldVelocity
           setKeysOn(oldKeysOn => [
             ...oldKeysOn,
             [activeChannel, id, theVelocity],
           ])
           return theVelocity
-        })
+        })(mouseVelocity.current)
       }
     })
   }
@@ -158,11 +154,10 @@ const MusicalKeyboard = React.forwardRef(({
     const { changedTouches, } = e
     Array.from(changedTouches).forEach(t => {
       const { clientX, clientY, } = t
-      const { current, } = keyboardRef
-      const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
+      const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
       if (keyAndVelocity !== null) {
         const { id, } = keyAndVelocity
-        setMouseVelocity(oldVelocity => {
+        mouseVelocity.current = (oldVelocity => {
           setKeysOn(oldKeysOn => [
             ...oldKeysOn.filter(([c, k,]) => !(
               c === activeChannel
@@ -171,7 +166,7 @@ const MusicalKeyboard = React.forwardRef(({
             [activeChannel, id, oldVelocity],
           ])
           return oldVelocity
-        })
+        })(mouseVelocity.current)
       }
     })
   }
@@ -180,11 +175,10 @@ const MusicalKeyboard = React.forwardRef(({
     const { changedTouches, } = e
     Array.from(changedTouches).forEach(t => {
       const { clientX, clientY, } = t
-      const { current, } = keyboardRef
-      const keyAndVelocity = getKeyAndVelocity(current)(clientX, clientY)
+      const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
       if (keyAndVelocity !== null) {
         const { id, } = keyAndVelocity
-        setMouseVelocity(oldVelocity => {
+        mouseVelocity.current = (oldVelocity => {
           setKeysOn(oldKeysOn => [
             ...oldKeysOn.filter(([c, k, ]) => !(
               c === activeChannel
@@ -192,7 +186,7 @@ const MusicalKeyboard = React.forwardRef(({
             )),
           ])
           return oldVelocity
-        })
+        })(mouseVelocity.current)
       }
     })
   }
@@ -334,6 +328,17 @@ const MusicalKeyboard = React.forwardRef(({
     setMetrics(METRICS[keySpacing])
   }, [keySpacing, ])
 
+  React.useEffect(() => {
+    const recalculate = () => {
+      recalculateBoundingClientRects(keyboardRef.current)
+    }
+    window.addEventListener('resize', recalculate)
+    recalculate()
+    return () => {
+      window.removeEventListener('resize', recalculate)
+    }
+  }, [keyboardRef, ])
+
   return (
     <div
       {...props}
@@ -405,203 +410,201 @@ const MusicalKeyboard = React.forwardRef(({
                 }}
               >
                 {
-                  naturalKeys
-                    .map(key => {
-                      const { id, } = key
-                      const placement = getKeyPlacement(octaveDivision)(id)
-                      const { [placement]: baseKeyWidth, } = metrics.widths
-                      const keyWidth = baseKeyWidth * (1 / flexBasis)
-                      const { [placement]: keyPositive } = metrics.offsets
-                      const keyOffset = (keyPositive - negative) * (1 / flexBasis)
-                      const dataId = (octave * 12) + placement
-                      return (
+                  naturalKeys.map(key => {
+                    const { id, } = key
+                    const placement = getKeyPlacement(octaveDivision)(id)
+                    const { [placement]: baseKeyWidth, } = metrics.widths
+                    const keyWidth = baseKeyWidth * (1 / flexBasis)
+                    const { [placement]: keyPositive } = metrics.offsets
+                    const keyOffset = (keyPositive - negative) * (1 / flexBasis)
+                    const dataId = (octave * 12) + placement
+                    return (
+                      <span
+                        key={id}
+                        data-id={dataId}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: `${keyOffset * 100}%`,
+                          width: `${keyWidth * 100}%`,
+                          height: '100%',
+                          border: 0,
+                          font: 'inherit',
+                          padding: 0,
+                          appearance: 'none',
+                          WebkitAppearance: 'none',
+                          MozAppearance: 'none',
+                          outline: 0,
+                          color: 'inherit',
+                        }}
+                      >
                         <span
-                          key={id}
-                          data-id={dataId}
+                          style={{
+                            ...keyStyles(key),
+                            backgroundColor: 'white',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                        {
+                          playedKeysOnState
+                            .filter(([, i]) => String(i) === String(dataId))
+                            .map(([c, , v]) => (
+                              <span
+                                key={c + ':' + dataId}
+                                style={{
+                                  backgroundColor: channelColors[c],
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  opacity: 0.25 + (0.5 * v),
+                                }}
+                              />
+                            ))
+                        }
+                        <span
                           style={{
                             position: 'absolute',
                             top: 0,
-                            left: `${keyOffset * 100}%`,
-                            width: `${keyWidth * 100}%`,
+                            left: 0,
+                            width: '100%',
                             height: '100%',
-                            border: 0,
-                            font: 'inherit',
-                            padding: 0,
-                            appearance: 'none',
-                            WebkitAppearance: 'none',
-                            MozAppearance: 'none',
-                            outline: 0,
-                            color: 'inherit',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'flex-end',
+                            boxSizing: 'border-box',
+                            paddingBottom: '0.5rem',
                           }}
                         >
                           <span
                             style={{
-                              ...keyStyles(key),
-                              backgroundColor: 'white',
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              width: '100%',
-                              height: '100%',
-                              boxSizing: 'border-box',
+                              transform: 'rotate(-90deg)',
                             }}
-                          />
-                          {
-                            playedKeysOnState
-                              .filter(([, i]) => String(i) === String(dataId))
-                              .map(([c, , v]) => (
+                          >
+                            {
+                              typeof labels === 'function'
+                                ? labels({ id: dataId, })
+                                : null
+                            }
+                          </span>
+                        </span>
+                      </span>
+                    )
+                  })
+                }
+                {
+                  accidentalKeyGroups.map(([placement, group]) => {
+                    const { [placement]: baseKeyWidth, } = metrics.widths
+                    const keyWidth = baseKeyWidth * (1 / flexBasis)
+                    const { [placement]: keyPositive } = metrics.offsets
+                    const keyOffset = (keyPositive - negative) * (1 / flexBasis)
+                    return (
+                      <span
+                        key={placement}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: `${keyOffset * 100}%`,
+                          width: `${keyWidth * 100}%`,
+                          height: isInBetweenAccidental(octaveDivision)(placement) ? inBetweenAccidentalKeyHeight : accidentalKeyHeight,
+                          border: 0,
+                          font: 'inherit',
+                          padding: 0,
+                          appearance: 'none',
+                          WebkitAppearance: 'none',
+                          MozAppearance: 'none',
+                          outline: 0,
+                          color: 'inherit',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'stretch',
+                        }}
+                      >
+                        {
+                          group.map((key, i, g) => {
+                            const { id, } = key
+                            const dark = (g.length - 1 - i) % 2 === 0
+                            const dataId = ((octave * 12) + Number(placement)) + String.fromCharCode(i + 'a'.charCodeAt(0))
+
+                            return (
+                              <span
+                                key={id}
+                                data-id={dataId}
+                                style={{
+                                  height: '100%',
+                                  position: 'relative',
+                                }}
+                              >
                                 <span
-                                  key={c + ':' + dataId}
                                   style={{
-                                    backgroundColor: channelColors[c],
+                                    backgroundColor: placement !== '4.5' && placement !== '11.5' ? (dark ? '#444' : '#888') : (dark ? '#ccc' : '#eee'),
+                                    ...keyStyles(key),
                                     position: 'absolute',
                                     top: 0,
                                     left: 0,
                                     width: '100%',
                                     height: '100%',
-                                    opacity: 0.25 + (0.5 * v),
+                                    boxSizing: 'border-box',
                                   }}
                                 />
-                              ))
-                          }
-                          <span
-                            style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              width: '100%',
-                              height: '100%',
-                              display: 'flex',
-                              justifyContent: 'center',
-                              alignItems: 'flex-end',
-                              boxSizing: 'border-box',
-                              paddingBottom: '0.5rem',
-                            }}
-                          >
-                            <span
-                              style={{
-                                transform: 'rotate(-90deg)',
-                              }}
-                            >
-                              {
-                                typeof labels === 'function'
-                                  ? labels({ id: dataId, })
-                                  : null
-                              }
-                            </span>
-                          </span>
-                        </span>
-                      )
-                    })
-                }
-                {
-                  accidentalKeyGroups
-                    .map(([placement, group]) => {
-                      const { [placement]: baseKeyWidth, } = metrics.widths
-                      const keyWidth = baseKeyWidth * (1 / flexBasis)
-                      const { [placement]: keyPositive } = metrics.offsets
-                      const keyOffset = (keyPositive - negative) * (1 / flexBasis)
-                      return (
-                        <span
-                          key={placement}
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: `${keyOffset * 100}%`,
-                            width: `${keyWidth * 100}%`,
-                            height: isInBetweenAccidental(octaveDivision)(placement) ? inBetweenAccidentalKeyHeight : accidentalKeyHeight,
-                            border: 0,
-                            font: 'inherit',
-                            padding: 0,
-                            appearance: 'none',
-                            WebkitAppearance: 'none',
-                            MozAppearance: 'none',
-                            outline: 0,
-                            color: 'inherit',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'stretch',
-                          }}
-                        >
-                          {
-                            group.map((key, i, g) => {
-                              const { id, } = key
-                              const dark = (g.length - 1 - i) % 2 === 0
-                              const dataId = ((octave * 12) + Number(placement)) + String.fromCharCode(i + 'a'.charCodeAt(0))
-
-                              return (
+                                {
+                                  playedKeysOnState
+                                    .filter(([, i]) => String(i) === String(dataId))
+                                    .map(([c, , v]) => (
+                                      <span
+                                        key={c + ':' + dataId}
+                                        style={{
+                                          backgroundColor: channelColors[c],
+                                          position: 'absolute',
+                                          top: 0,
+                                          left: 0,
+                                          width: '100%',
+                                          height: '100%',
+                                          opacity: 0.25 + (0.5 * v),
+                                        }}
+                                      />
+                                    ))
+                                }
                                 <span
-                                  key={id}
-                                  data-id={dataId}
                                   style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
                                     height: '100%',
-                                    position: 'relative',
+                                    filter: 'invert(1)',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'flex-end',
+                                    boxSizing: 'border-box',
+                                    paddingBottom: '0.5rem',
                                   }}
                                 >
                                   <span
                                     style={{
-                                      backgroundColor: placement !== '4.5' && placement !== '11.5' ? (dark ? '#444' : '#888') : (dark ? '#ccc' : '#eee'),
-                                      ...keyStyles(key),
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      width: '100%',
-                                      height: '100%',
-                                      boxSizing: 'border-box',
-                                    }}
-                                  />
-                                  {
-                                    playedKeysOnState
-                                      .filter(([, i]) => String(i) === String(dataId))
-                                      .map(([c, , v]) => (
-                                        <span
-                                          key={c + ':' + dataId}
-                                          style={{
-                                            backgroundColor: channelColors[c],
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            width: '100%',
-                                            height: '100%',
-                                            opacity: 0.25 + (0.5 * v),
-                                          }}
-                                        />
-                                      ))
-                                  }
-                                  <span
-                                    style={{
-                                      position: 'absolute',
-                                      top: 0,
-                                      left: 0,
-                                      width: '100%',
-                                      height: '100%',
-                                      filter: 'invert(1)',
-                                      display: 'flex',
-                                      justifyContent: 'center',
-                                      alignItems: 'flex-end',
-                                      boxSizing: 'border-box',
-                                      paddingBottom: '0.5rem',
+                                      transform: 'rotate(-90deg)',
                                     }}
                                   >
-                                    <span
-                                      style={{
-                                        transform: 'rotate(-90deg)',
-                                      }}
-                                    >
-                                      {
-                                        typeof labels === 'function'
-                                          ? labels({ id: dataId, })
-                                          : null
-                                      }
-                                    </span>
+                                    {
+                                      typeof labels === 'function'
+                                        ? labels({ id: dataId, })
+                                        : null
+                                    }
                                   </span>
                                 </span>
-                              )
-                            })
-                          }
-                        </span>
-                      )
-                    })
+                              </span>
+                            )
+                          })
+                        }
+                      </span>
+                    )
+                  })
                 }
               </span>
             )
@@ -621,6 +624,8 @@ const MusicalKeyboard = React.forwardRef(({
               display: 'block',
               cursor: 'pointer',
             }}
+            onDragStart={e => e.preventDefault()}
+            onContextMenu={e => e.preventDefault()}
             onMouseMove={handleMouseMove}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}

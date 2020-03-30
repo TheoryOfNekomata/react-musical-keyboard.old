@@ -51,9 +51,6 @@ Storybook
     )
     const [startKey, endKey, ] = ranges[range]
 
-    // const startKey = number('Start key', 48)
-    // const endKey = number('End key', 71)
-
     return (
       <MusicalKeyboard
         onKeyOn={action('Key On')}
