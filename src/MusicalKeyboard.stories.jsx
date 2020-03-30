@@ -74,6 +74,7 @@ Storybook
           },
           'none',
         )].map(k => [0, k, 127])}
+        activeChannel={number('Channel', 0, { min: 0, max: 15, })}
         octaveDivision={select('Octave division', [12, 17, 19, 24, 31, 36], 12)}
         style={{
           main: {
