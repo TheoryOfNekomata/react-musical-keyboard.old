@@ -11,13 +11,13 @@ const minorScale = [0, 2, 3, 5, 7, 8, 10, ]
 
 const labels = {
   none: null,
-  middleC: key => key.id === 60 ? 'C' : null,
+  middleC: key => parseInt(key.id) === 60 ? 'C' : null,
   keyNumber: key => key.id,
-  pitch: key => pitchClasses[key.id % pitchClasses.length],
-  noteName: key => `${pitchClasses[key.id % pitchClasses.length]}${Math.floor(key.id / pitchClasses.length)}`,
+  pitch: key => pitchClasses[parseInt(key.id) % pitchClasses.length],
+  noteName: key => `${pitchClasses[parseInt(key.id) % pitchClasses.length]}${Math.floor(parseInt(key.id) / pitchClasses.length)}`,
   pitchClass: key => key.id % pitchClasses.length === 0 ? 'C' : null,
-  octave: key => Math.floor(key.id / pitchClasses.length) === 4 ? pitchClasses[key.id % pitchClasses.length] : null,
-  scale: key => minorScale.includes(key.id % pitchClasses.length) ? minorScale.indexOf(key.id % pitchClasses.length) + 1 : null,
+  octave: key => Math.floor(parseInt(key.id) / pitchClasses.length) === 4 ? pitchClasses[parseInt(key.id) % pitchClasses.length] : null,
+  scale: key => minorScale.includes(parseInt(key.id) % pitchClasses.length) ? minorScale.indexOf(parseInt(key.id) % pitchClasses.length) + 1 : null,
 }
 
 const keysOn = {
@@ -86,7 +86,7 @@ Storybook
           {
             none: 'none',
             'middle C': 'middleC',
-            'key number': 'keyNumber',
+            'key ID': 'keyNumber',
             pitch: 'pitch',
             'note name (pitch + octave)': 'noteName',
             'pitch class': 'pitchClass',

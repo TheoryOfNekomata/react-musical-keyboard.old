@@ -353,6 +353,8 @@ const MusicalKeyboard = React.forwardRef(({
           flexDirection: 'row-reverse',
           overflow: 'hidden',
           lineHeight: 1,
+          pointerEvents: 'none',
+          userSelect: 'none',
         }}
       >
         {
@@ -483,7 +485,7 @@ const MusicalKeyboard = React.forwardRef(({
                             >
                               {
                                 typeof labels === 'function'
-                                  ? labels(key)
+                                  ? labels({ id: dataId, })
                                   : null
                               }
                             </span>
@@ -588,7 +590,7 @@ const MusicalKeyboard = React.forwardRef(({
                                     >
                                       {
                                         typeof labels === 'function'
-                                          ? labels(key)
+                                          ? labels({ id: dataId, })
                                           : null
                                       }
                                     </span>
