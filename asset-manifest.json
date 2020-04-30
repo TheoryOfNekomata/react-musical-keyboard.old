@@ -1,19 +1,19 @@
 {
   "files": {
-    "main.css": "/react-musical-keyboard/static/css/main.4a49170d.chunk.css",
-    "main.js": "/react-musical-keyboard/static/js/main.6c74e587.chunk.js",
-    "main.js.map": "/react-musical-keyboard/static/js/main.6c74e587.chunk.js.map",
-    "runtime~main.js": "/react-musical-keyboard/static/js/runtime~main.d16a337e.js",
-    "runtime~main.js.map": "/react-musical-keyboard/static/js/runtime~main.d16a337e.js.map",
-    "static/js/2.720d36bc.chunk.js": "/react-musical-keyboard/static/js/2.720d36bc.chunk.js",
-    "static/js/2.720d36bc.chunk.js.map": "/react-musical-keyboard/static/js/2.720d36bc.chunk.js.map",
-    "static/js/3.4c51365a.chunk.js": "/react-musical-keyboard/static/js/3.4c51365a.chunk.js",
-    "static/js/3.4c51365a.chunk.js.map": "/react-musical-keyboard/static/js/3.4c51365a.chunk.js.map",
-    "static/js/4.fdf1a88c.chunk.js": "/react-musical-keyboard/static/js/4.fdf1a88c.chunk.js",
-    "static/js/4.fdf1a88c.chunk.js.map": "/react-musical-keyboard/static/js/4.fdf1a88c.chunk.js.map",
+    "main.css": "/react-musical-keyboard/static/css/main.342b01c3.chunk.css",
+    "main.js": "/react-musical-keyboard/static/js/main.eedd4f04.chunk.js",
+    "main.js.map": "/react-musical-keyboard/static/js/main.eedd4f04.chunk.js.map",
+    "runtime~main.js": "/react-musical-keyboard/static/js/runtime~main.d3310705.js",
+    "runtime~main.js.map": "/react-musical-keyboard/static/js/runtime~main.d3310705.js.map",
+    "static/js/2.076709be.chunk.js": "/react-musical-keyboard/static/js/2.076709be.chunk.js",
+    "static/js/2.076709be.chunk.js.map": "/react-musical-keyboard/static/js/2.076709be.chunk.js.map",
+    "static/js/3.f528c13e.chunk.js": "/react-musical-keyboard/static/js/3.f528c13e.chunk.js",
+    "static/js/3.f528c13e.chunk.js.map": "/react-musical-keyboard/static/js/3.f528c13e.chunk.js.map",
+    "static/js/4.77e47780.chunk.js": "/react-musical-keyboard/static/js/4.77e47780.chunk.js",
+    "static/js/4.77e47780.chunk.js.map": "/react-musical-keyboard/static/js/4.77e47780.chunk.js.map",
     "index.html": "/react-musical-keyboard/index.html",
-    "precache-manifest.5afd1ab021de86d0d672500f6751e131.js": "/react-musical-keyboard/precache-manifest.5afd1ab021de86d0d672500f6751e131.js",
+    "precache-manifest.71f2e93f42ad0a52140610251b30a407.js": "/react-musical-keyboard/precache-manifest.71f2e93f42ad0a52140610251b30a407.js",
     "service-worker.js": "/react-musical-keyboard/service-worker.js",
-    "static/css/main.4a49170d.chunk.css.map": "/react-musical-keyboard/static/css/main.4a49170d.chunk.css.map"
+    "static/css/main.342b01c3.chunk.css.map": "/react-musical-keyboard/static/css/main.342b01c3.chunk.css.map"
   }
 }
