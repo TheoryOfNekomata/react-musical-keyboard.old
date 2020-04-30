@@ -1,7 +1,7 @@
 let bounds
 
 export const recalculateBoundingClientRects = current => {
-  window.setTimeout(() => {
+  window.requestAnimationFrame(() => {
     bounds = Array
       .from(current.children[0].children)
       .reduce((r, o) => [o, ...r], [])

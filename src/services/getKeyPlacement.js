@@ -1,11 +1,21 @@
 import getKeyPlacementRanges from './getKeyPlacementRanges'
 
+const memoizedAccidentalPlacements = {}
+
 export default octaveDivision => keyId => {
   const pitchClass = Number(keyId) % 12
-  const accidentalPlacements = getKeyPlacementRanges(octaveDivision)
+  const {
+    [octaveDivision]: memoizedAccidentalPlacement = null
+  } = memoizedAccidentalPlacements
 
-  const [theAccidentalPlacement = null, ] = Object
-    .entries(accidentalPlacements)
+  let theAccidentalPlacementEntries
+  if (memoizedAccidentalPlacement === null) {
+    memoizedAccidentalPlacements[octaveDivision] = theAccidentalPlacementEntries = Object.entries(getKeyPlacementRanges(octaveDivision))
+  } else {
+    theAccidentalPlacementEntries = memoizedAccidentalPlacement
+  }
+
+  const [theAccidentalPlacement = null, ] = theAccidentalPlacementEntries
     .find(([, [start, end],]) => start <= pitchClass && pitchClass < end)
 
   const a = Number(theAccidentalPlacement)

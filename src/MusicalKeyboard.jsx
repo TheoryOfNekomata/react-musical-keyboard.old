@@ -7,28 +7,202 @@ import isInBetweenAccidental from './services/isInBetweenAccidental'
 import getKeyPlacement from './services/getKeyPlacement'
 import getKeyAndVelocity, { recalculateBoundingClientRects, } from './services/getKeyAndVelocity'
 
+const OCTAVE_WRAPPER_STYLES = {
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'row-reverse',
+  overflow: 'hidden',
+  lineHeight: 1,
+  pointerEvents: 'none',
+  userSelect: 'none',
+}
+
+const PLAYABLE_STYLE = {
+  width: '100%',
+  height: '100%',
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  display: 'block',
+  cursor: 'pointer',
+}
+
 const DEFAULT_CHANNEL_COLORS = [
-  '#000055',
-  '#005500',
-  '#550000',
-  '#555500',
-  '#0000aa',
-  '#00aa00',
-  '#00aaaa',
-  '#aa0000',
-  '#aa00aa',
-  '#aaaa00',
-  '#0000ff',
-  '#00ff00',
-  '#00ffff',
-  '#ff0000',
-  '#ff00ff',
-  '#ffff00',
+  '#005',
+  '#050',
+  '#500',
+  '#550',
+  '#00a',
+  '#0a0',
+  '#0aa',
+  '#a00',
+  '#a0a',
+  '#aa0',
+  '#00f',
+  '#0f0',
+  '#0ff',
+  '#f00',
+  '#f0f',
+  '#ff0',
 ]
 
 const defaultKeyStyles = () => ({
   border: '1px solid black',
 })
+
+const handleMouseDown = ({
+  touch,
+  mouseVelocity,
+  setKeysOn,
+  activeChannel,
+}) => e => {
+  if (touch) {
+    return
+  }
+  const { buttons, clientX, clientY, } = e
+  if (buttons !== 1) {
+    return
+  }
+  const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
+  if (keyAndVelocity !== null) {
+    const { velocity, id } = keyAndVelocity
+    mouseVelocity.current = (oldVelocity => {
+      const theVelocity = oldVelocity === null ? velocity : oldVelocity
+      setKeysOn(oldKeysOn => [
+        ...oldKeysOn,
+        [activeChannel, id, theVelocity],
+      ])
+      return theVelocity
+    })(mouseVelocity.current)
+  }
+}
+
+const handleMouseUp = ({
+  touch,
+  mouseVelocity,
+  setKeysOn,
+  activeChannel,
+}) => e => {
+  if (touch) {
+    return
+  }
+  const { clientX, clientY, } = e
+  const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
+  if (keyAndVelocity !== null) {
+    const { id } = keyAndVelocity
+    mouseVelocity.current = (() => {
+      setKeysOn(oldKeysOn => oldKeysOn.filter(([c, k, ]) => !(
+        c === activeChannel
+        || k === id
+      )))
+      return null
+    })()
+  }
+}
+
+const handleMouseMove = ({
+  mouseVelocity,
+  setKeysOn,
+  activeChannel,
+}) => e => {
+  const { buttons, clientX, clientY, } = e
+  if (buttons !== 1) {
+    return
+  }
+  const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
+  if (keyAndVelocity !== null) {
+    const { id, } = keyAndVelocity
+    mouseVelocity.current = (oldVelocity => {
+      setKeysOn(oldKeysOn => [
+        ...oldKeysOn.filter(([c, k, ]) => !(
+          c === activeChannel
+          || k === id
+        )),
+        [activeChannel, id, oldVelocity],
+      ])
+      return oldVelocity
+    })(mouseVelocity.current)
+  }
+}
+
+const handleTouchStart = ({
+  setTouch,
+  mouseVelocity,
+  setKeysOn,
+  activeChannel,
+}) => e => {
+  setTouch(true)
+  const { targetTouches, } = e
+  Array.from(targetTouches).forEach(t => {
+    const { clientX, clientY, } = t
+    const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
+    if (keyAndVelocity !== null) {
+      const { velocity, id, } = keyAndVelocity
+      mouseVelocity.current = (oldVelocity => {
+        const theVelocity = oldVelocity === null ? velocity : oldVelocity
+        setKeysOn(oldKeysOn => [
+          ...oldKeysOn,
+          [activeChannel, id, theVelocity],
+        ])
+        return theVelocity
+      })(mouseVelocity.current)
+    }
+  })
+}
+
+const handleTouchMove = ({
+  mouseVelocity,
+  setKeysOn,
+  activeChannel,
+}) => e => {
+  const { changedTouches, } = e
+  Array.from(changedTouches).forEach(t => {
+    const { clientX, clientY, } = t
+    const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
+    if (keyAndVelocity !== null) {
+      const { id, } = keyAndVelocity
+      mouseVelocity.current = (oldVelocity => {
+        setKeysOn(oldKeysOn => [
+          ...oldKeysOn.filter(([c, k, ]) => !(
+            c === activeChannel
+            || k === id
+          )),
+          [activeChannel, id, oldVelocity],
+        ])
+        return oldVelocity
+      })(mouseVelocity.current)
+    }
+  })
+}
+
+const handleTouchEnd = ({
+  mouseVelocity,
+  setKeysOn,
+  activeChannel,
+}) => e => {
+  const { changedTouches, } = e
+  Array.from(changedTouches).forEach(t => {
+    const { clientX, clientY, } = t
+    const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
+    if (keyAndVelocity !== null) {
+      const { id, } = keyAndVelocity
+      mouseVelocity.current = (oldVelocity => {
+        setKeysOn(oldKeysOn => [
+          ...oldKeysOn.filter(([c, k, ]) => !(
+            c === activeChannel
+            || k === id
+          )),
+        ])
+        return oldVelocity
+      })(mouseVelocity.current)
+    }
+  })
+}
+
+const noop = e => {
+  e.preventDefault()
+}
 
 /**
  * A component for events that a controller with the likeness of a musical keyboard triggers (for instance, MIDI
@@ -58,138 +232,16 @@ const MusicalKeyboard = React.forwardRef(({
   playable = false,
   ...props
 }, passedRef) => {
-  const [keysState, setKeysState, ] = React.useState(
+  const [keysState, setKeysState,] = React.useState(
     createKeysState(startKey, endKey, octaveDivision)
   )
-  const [theOctaves, setOctaves, ] = React.useState([])
-  const [keysOnState, setKeysOn, ] = React.useState(keysOn)
-  const [metrics, setMetrics, ] = React.useState(METRICS[keySpacing])
-  const [playedKeysOnState, setPlayedKeysOnState, ] = React.useState(keysOn)
-  const [touch, setTouch, ] = React.useState(false)
+  const [theOctaves, setOctaves,] = React.useState([])
+  const [keysOnState, setKeysOn,] = React.useState(keysOn)
+  const [metrics, setMetrics,] = React.useState(METRICS[keySpacing])
+  const [playedKeysOnState, setPlayedKeysOnState,] = React.useState(keysOn)
+  const [touch, setTouch,] = React.useState(false)
   const keyboardRef = passedRef || React.useRef(null)
   const mouseVelocity = React.useRef(null)
-
-  const handleMouseDown = e => {
-    if (touch) {
-      return
-    }
-    const { buttons, clientX, clientY, } = e
-    if (buttons !== 1) {
-      return
-    }
-    const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
-    if (keyAndVelocity !== null) {
-      const { velocity, id } = keyAndVelocity
-      mouseVelocity.current = (oldVelocity => {
-        const theVelocity = oldVelocity === null ? velocity : oldVelocity
-        setKeysOn(oldKeysOn => [
-          ...oldKeysOn,
-          [activeChannel, id, theVelocity],
-        ])
-        return theVelocity
-      })(mouseVelocity.current)
-    }
-  }
-
-  const handleMouseUp = e => {
-    if (touch) {
-      return
-    }
-    const { clientX, clientY, } = e
-    const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
-    if (keyAndVelocity !== null) {
-      const { id } = keyAndVelocity
-      mouseVelocity.current = (() => {
-        setKeysOn(oldKeysOn => oldKeysOn.filter(([c, k,]) => !(
-          c === activeChannel
-          || k === id
-        )))
-        return null
-      })()
-    }
-  }
-
-  const handleMouseMove = e => {
-    const { buttons, clientX, clientY, } = e
-    if (buttons !== 1) {
-      return
-    }
-    const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
-    if (keyAndVelocity !== null) {
-      const { id, } = keyAndVelocity
-      mouseVelocity.current = (oldVelocity => {
-        setKeysOn(oldKeysOn => [
-          ...oldKeysOn.filter(([c, k, ]) => !(
-            c === activeChannel
-            || k === id
-          )),
-          [activeChannel, id, oldVelocity],
-        ])
-        return oldVelocity
-      })(mouseVelocity.current)
-    }
-  }
-
-  const handleTouchStart = e => {
-    setTouch(true)
-    const { targetTouches, } = e
-    Array.from(targetTouches).forEach(t => {
-      const { clientX, clientY, } = t
-      const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
-      if (keyAndVelocity !== null) {
-        const { velocity, id, } = keyAndVelocity
-        mouseVelocity.current = (oldVelocity => {
-          const theVelocity = oldVelocity === null ? velocity : oldVelocity
-          setKeysOn(oldKeysOn => [
-            ...oldKeysOn,
-            [activeChannel, id, theVelocity],
-          ])
-          return theVelocity
-        })(mouseVelocity.current)
-      }
-    })
-  }
-
-  const handleTouchMove = e => {
-    const { changedTouches, } = e
-    Array.from(changedTouches).forEach(t => {
-      const { clientX, clientY, } = t
-      const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
-      if (keyAndVelocity !== null) {
-        const { id, } = keyAndVelocity
-        mouseVelocity.current = (oldVelocity => {
-          setKeysOn(oldKeysOn => [
-            ...oldKeysOn.filter(([c, k,]) => !(
-              c === activeChannel
-              || k === id
-            )),
-            [activeChannel, id, oldVelocity],
-          ])
-          return oldVelocity
-        })(mouseVelocity.current)
-      }
-    })
-  }
-
-  const handleTouchEnd = e => {
-    const { changedTouches, } = e
-    Array.from(changedTouches).forEach(t => {
-      const { clientX, clientY, } = t
-      const keyAndVelocity = getKeyAndVelocity(clientX, clientY)
-      if (keyAndVelocity !== null) {
-        const { id, } = keyAndVelocity
-        mouseVelocity.current = (oldVelocity => {
-          setKeysOn(oldKeysOn => [
-            ...oldKeysOn.filter(([c, k, ]) => !(
-              c === activeChannel
-              || k === id
-            )),
-          ])
-          return oldVelocity
-        })(mouseVelocity.current)
-      }
-    })
-  }
 
   React.useEffect(() => {
     const handleKeyDown = e => {
@@ -221,7 +273,7 @@ const MusicalKeyboard = React.forwardRef(({
       const { keyCode, } = e
       const { [keyCode]: id = null, } = keyboardMapping
       if (['string', 'number'].includes(typeof id)) {
-        setKeysOn(oldKeysOn => oldKeysOn.filter(([c, k, ]) => {
+        setKeysOn(oldKeysOn => oldKeysOn.filter(([c, k,]) => {
           if (c !== activeChannel) {
             return true
           }
@@ -240,11 +292,11 @@ const MusicalKeyboard = React.forwardRef(({
         window.removeEventListener('keyup', handleKeyUp, { capture: true, })
       }
     }
-  }, [playable, activeChannel, keyboardMapping, keyboardRef, keyboardVelocity, ])
+  }, [playable, activeChannel, keyboardMapping, keyboardRef, keyboardVelocity,])
 
   React.useEffect(() => {
     setKeysState(createKeysState(startKey, endKey, octaveDivision))
-  }, [startKey, endKey, octaveDivision, ])
+  }, [startKey, endKey, octaveDivision,])
 
   React.useEffect(() => {
     setPlayedKeysOnState(oldPlayedKeysOnState => {
@@ -298,7 +350,7 @@ const MusicalKeyboard = React.forwardRef(({
         ...added,
       ]
     })
-  }, [keysOnState, onKeyOff, onKeyOn, ])
+  }, [keysOnState, onKeyOff, onKeyOn,])
 
   React.useEffect(() => {
     setTouch(false)
@@ -322,11 +374,11 @@ const MusicalKeyboard = React.forwardRef(({
     setOctaves(
       Object.entries(octaves).reduce((r, o) => [o, ...r], [])
     )
-  }, [keysState, ])
+  }, [keysState,])
 
   React.useEffect(() => {
     setMetrics(METRICS[keySpacing])
-  }, [keySpacing, ])
+  }, [keySpacing,])
 
   React.useEffect(() => {
     const recalculate = () => {
@@ -338,6 +390,10 @@ const MusicalKeyboard = React.forwardRef(({
       window.removeEventListener('resize', recalculate)
     }
   }, [keyboardRef, ])
+
+  React.useEffect(() => {
+    recalculateBoundingClientRects(keyboardRef.current)
+  }, [startKey, endKey, octaveDivision, keyboardRef, ])
 
   return (
     <div
@@ -351,22 +407,13 @@ const MusicalKeyboard = React.forwardRef(({
       ref={keyboardRef}
     >
       <span
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'row-reverse',
-          overflow: 'hidden',
-          lineHeight: 1,
-          pointerEvents: 'none',
-          userSelect: 'none',
-        }}
+        style={OCTAVE_WRAPPER_STYLES}
       >
         {
-          theOctaves.map(([octave, octaveKeys, ]) => {
-            const [firstKey, ] = octaveKeys
+          theOctaves.map(([octave, octaveKeys,]) => {
+            const [firstKey,] = octaveKeys
             const { id: firstKeyId, } = firstKey
-            const [lastKey, ] = octaveKeys.slice(-1)
+            const [lastKey,] = octaveKeys.slice(-1)
             const { id: lastKeyId, } = lastKey
             const lastKeyPitchClass = getKeyPlacement(octaveDivision)(lastKeyId)
             const firstKeyPitchClass = getKeyPlacement(octaveDivision)(firstKeyId)
@@ -379,25 +426,24 @@ const MusicalKeyboard = React.forwardRef(({
               || isProperAccidental(octaveDivision)(key.id)
             ))
 
-            const accidentalKeyGroups = Object
-              .entries(
-                octaveKeys
-                  .filter(key => (isInBetweenAccidental(octaveDivision)(key.id) || isProperAccidental(octaveDivision)(key.id)))
-                  .reduce(
-                    (grouped, key) => {
-                      const placement = getKeyPlacement(octaveDivision)(key.id)
-                      const { [placement]: group = [] } = grouped
-                      return {
-                        ...grouped,
-                        [placement]: [
-                          ...group,
-                          key
-                        ]
-                      }
-                    },
-                    {}
-                  )
-              )
+            const accidentalKeyGroups = Object.entries(
+              octaveKeys
+                .filter(key => (isInBetweenAccidental(octaveDivision)(key.id) || isProperAccidental(octaveDivision)(key.id)))
+                .reduce(
+                  (grouped, key) => {
+                    const placement = getKeyPlacement(octaveDivision)(key.id)
+                    const { [placement]: group = [] } = grouped
+                    return {
+                      ...grouped,
+                      [placement]: [
+                        ...group,
+                        key
+                      ]
+                    }
+                  },
+                  {}
+                )
+            )
 
             return (
               <span
@@ -615,23 +661,42 @@ const MusicalKeyboard = React.forwardRef(({
         playable
         && (
           <span
-            style={{
-              width: '100%',
-              height: '100%',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              display: 'block',
-              cursor: 'pointer',
-            }}
-            onDragStart={e => e.preventDefault()}
-            onContextMenu={e => e.preventDefault()}
-            onMouseMove={handleMouseMove}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
+            style={PLAYABLE_STYLE}
+            onDragStart={noop}
+            onContextMenu={noop}
+            onMouseMove={handleMouseMove({
+              mouseVelocity,
+              setKeysOn,
+              activeChannel,
+            })}
+            onMouseDown={handleMouseDown({
+              touch,
+              mouseVelocity,
+              setKeysOn,
+              activeChannel,
+            })}
+            onMouseUp={handleMouseUp({
+              touch,
+              mouseVelocity,
+              setKeysOn,
+              activeChannel,
+            })}
+            onTouchStart={handleTouchStart({
+              setTouch,
+              mouseVelocity,
+              setKeysOn,
+              activeChannel,
+            })}
+            onTouchMove={handleTouchMove({
+              mouseVelocity,
+              setKeysOn,
+              activeChannel,
+            })}
+            onTouchEnd={handleTouchEnd({
+              mouseVelocity,
+              setKeysOn,
+              activeChannel,
+            })}
           />
         )
       }
@@ -674,11 +739,15 @@ MusicalKeyboard.propTypes = {
   /** How many notes should encompass a single octave? */
   octaveDivision: PropTypes.number,
   /** Manner of spacing of the keys? */
-  keySpacing: PropTypes.oneOf(['standard', 'fruityLoops']),
+  keySpacing: PropTypes.oneOf(['standard', 'garageBand', 'fruityLoops']),
   /** The array of activated keys via their key numbers. */
   keysOn: PropTypes.array,
   /** Is the component active? */
   playable: PropTypes.bool,
+
+  inBetweenAccidentalKeyHeight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  channelColors: PropTypes.array,
+  activeChannel: PropTypes.number,
 }
 
 export default MusicalKeyboard
